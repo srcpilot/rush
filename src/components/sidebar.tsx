@@ -1,63 +1,108 @@
 "use client";
 
-import React from "react";
-import { Folder, Files, Clock, Share2, Trash2, User } from "lucide-react";
-import Link from "next/link";
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils.js';
+import { 
+  FileText, 
+  Users, 
+  Trash2, 
+  Search, 
+  Menu, 
+  X,
+  HardDrive
+} from 'lucide-react';
 
-export default function Sidebar() {
-  const menuItems = [
-    { icon: <Files size={20} />, label: "All Files", href: "/dashboard" },
-    { icon: <Clock size={20} />, label: "Recent", href: "#" },
-    { icon: <Share2 size={20} />, label: "Shared", href: "#" },
-    { icon: <Trash2 size={20} />, label: "Trash", href: "#" },
-  ];
+const navItems = [
+  { name: 'Files', href: '/files', icon: FileText },
+  { name: 'Shared', href: '/shared', icon: Users },
+  { name: 'Trash', href: '/trash', icon: Trash2 },
+  { name: 'Search', href: '/search', icon: Search },
+];
+
+export function Sidebar() {
+  const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
-    <aside className="hidden md:flex flex-col w-[240px] fixed h-full bg-[#0a0a0a] border-r border-[#2a2a2a]">
-      <div className="p-6">
-        <h1 className="text-[#d4a843] text-xl font-bold tracking-tighter">RUSH</h1>
-      </div>
+    <>
+      {/* Mobile Hamburger */}
+      <button
+        className="fixed top-4 left-4 z-50 md:hidden p-2 text-text-primary bg-bg-surface border border-border rounded-md"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {isOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
 
-      <nav className="flex-1 px-4 space-y-1">
-        <p className="px-2 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          Files
-        </p>
-        {menuItems.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className="flex items-center gap-3 px-2 py-2 text-sm text-gray-400 hover:text-[#d4a843] hover:bg-[#1a1a1a] rounded-md transition-all"
-          >
-            {item.icon}
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+      {/* Sidebar Overlay for mobile */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
 
-      <div className="p-4 space-y-4">
-        {/* Storage Bar */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-xs text-gray-500">
-            <span>Storage</span>
-            <span>85%</span>
+      <aside className={cn(
+        "fixed left-0 top-0 h-full w-60 bg-bg-surface border-r border-border z-40 transition-transform duration-300 md:translate-x-0",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="flex flex-col h-full p-4">
+          {/* Logo Section */}
+          <div className="flex items-center gap-2 px-2 mb-8">
+            <div className="w-8 h-8 bg-accent-gold rounded flex items-center justify-center">
+              <span className="text-bg-primary font-bold text-xl">R</span>
+            </div>
+            <span className="text-xl font-bold tracking-tight">Rush</span>
           </div>
-          <div className="w-full h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
-            <div className="h-full bg-[#d4a843] w-[85%]"></div>
+
+          {/* Navigation */}
+          <nav className="flex-1 space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setIsOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                    isActive 
+                      ? "bg-accent-gold/10 text-accent-gold" 
+                      : "text-text-secondary hover:text-text-primary hover:bg-bg-elevated"
+                  )}
+                >
+                  <Icon size={18} />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Storage Meter */}
+          <div className="mt-auto pt-4 border-t border-border">
+            <div className="flex items-center gap-2 text-xs text-text-secondary mb-2 px-2">
+              <HardDrive size={14} />
+              <span>75% of 10GB used</span>
+            </div>
+            <div className="h-1 w-full bg-bg-elevated rounded-full overflow-hidden">
+              <div className="h-full bg-accent-gold w-3/4" />
+            </div>
           </div>
-          <p className="text-[10px] text-gray-600">8.5 GB of 10 GB used</p>
+
+          {/* User Menu Placeholder */}
+          <div className="mt-4 pt-4 border-t border-border px-2">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-bg-elevated border border-border" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-text-primary truncate">User Name</p>
+                <p className="text-xs text-text-secondary truncate">user@example.com</p>
+              </div>
+            </div>
+          </div>
         </div>
-
-        {/* User Menu */}
-        <div className="flex items-center gap-3 px-2 py-3 border-t border-[#2a2a2a]">
-          <div className="w-8 h-8 rounded-full bg-[#d4a843]/20 flex items-center justify-center text-[#d4a843]">
-            <User size={18} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate text-[#f5f0e8]">Alex Rivera</p>
-            <p className="text-xs text-gray-500 truncate">alex@rush.com</p>
-          </div>
-        </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

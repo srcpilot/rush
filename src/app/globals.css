@@ -1,35 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  --background: #0a0a0a;
-  --foreground: #f5f0e8;
-  --accent: #d4a843;
-  --muted: #1a1a1a;
-  --border: #2a2a2a;
+@theme {
+  --color-bg-primary: #0a0a0a;
+  --color-bg-surface: #141414;
+  --color-bg-elevated: #1a1a1a;
+  --color-border: #262626;
+  --color-text-primary: #fafaf5;
+  --color-text-secondary: #a3a3a0;
+  --color-accent-gold: #d4a853;
+  --color-accent-cream: #f5f0e8;
+  --color-accent-hover: #e0b85c;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-/* Custom scrollbar for a clean dark look */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--background);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
+@layer base {
+  body {
+    @apply bg-bg-primary text-text-primary antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
 }
