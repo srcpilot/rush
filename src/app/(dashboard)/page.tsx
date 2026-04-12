@@ -4,11 +4,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context.js';
 import type { RushFile, Folder } from '@/lib/types.js';
-import Breadcrumb from '@/components/breadcrumb.tsx';
-import FolderCard from '@/components/folder-card.tsx';
-import FileCard from '@/components/file-card.tsx';
-import EmptyState from '@/components/empty-state.tsx';
-import ContextMenu from '@/components/context-menu.tsx';
+import Breadcrumb from '@/components/breadcrumb.js';
+import FolderCard from '@/components/folder-card.js';
+import FileCard from '@/components/file-card.js';
+import EmptyState from '@/components/empty-state.js';
+import ContextMenu from '@/components/context-menu.js';
 
 interface MenuTarget {
   id: string;
@@ -44,7 +44,7 @@ export default function DashboardPage() {
       
       if (!response.ok) throw new Error("Failed to fetch");
       
-      const data = await response.json();
+      const data = await response.json() as { folders?: Folder[]; files?: RushFile[] };
       setFolders(data.folders || []);
       setFiles(data.files || []);
     } catch (error) {
@@ -104,11 +104,11 @@ export default function DashboardPage() {
               {folders.map((folder) => (
                 <div 
                   key={folder.id} 
-                  onContextMenu={(e) => handleContextMenu(e, folder.id, 'folder')}
+                  onContextMenu={(e) => handleContextMenu(e, String(folder.id), 'folder')}
                 >
-                  <FolderCard 
-                    folder={folder} 
-                    onClick={() => handleFolderClick(folder.id)} 
+                  <FolderCard
+                    folder={folder}
+                    onClick={() => handleFolderClick(String(folder.id))}
                   />
                 </div>
               ))}
@@ -123,7 +123,7 @@ export default function DashboardPage() {
               {files.map((file) => (
                 <div 
                   key={file.id} 
-                  onContextMenu={(e) => handleContextMenu(e, file.id, 'file')}
+                  onContextMenu={(e) => handleContextMenu(e, String(file.id), 'file')}
                 >
                   <FileCard file={file} />
                 </div>

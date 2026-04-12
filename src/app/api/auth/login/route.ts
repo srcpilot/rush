@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCloudflareContext } from 'cloudflare:workers';
 import { getUserByEmail } from '@/lib/db.js';
 import { verifyPassword, createToken } from '@/lib/auth.js';
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    const { email, password } = await req.json() as { email: string; password: string };
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    const user = await getUserByEmail(email);
+    const { env } = getCloudflareContext();
+    const user = await getUserByEmail(env.DB, email);
     if (!user) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
@@ -20,7 +22,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const token = await createToken(user);
+    const secret = env.JWT_SECRET || 'CHANGE_ME_IN_PRODUCTION';
+    const token = createToken(user.id, secret);
 
     const { password_hash, ...userWithoutPassword } = user;
 

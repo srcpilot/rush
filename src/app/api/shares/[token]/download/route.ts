@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { streamFile } from '@/lib/r2.js';
 import { getFile } from '@/lib/db.js';
-import { Share } from '../share.js';
 
 export async function GET(req: NextRequest, { params }: { params: { token: string } }) {
   const { token } = params;

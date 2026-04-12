@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCloudflareContext } from 'cloudflare:workers';
 import type { RushFile } from '@/lib/types.js';
 import { getFile, deleteFile } from '@/lib/db.js';
 import { getAuthUser } from '@/lib/auth.js';
-import { getCloudflareContext } from 'cloudflare:workers';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { env } = getCloudflareContext();
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
-    const file = await getFile(params.id);
+    const file = await getFile(env.DB, params.id);
     if (!file || file.owner_id !== user.id) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
@@ -33,13 +33,12 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   }
 
   try {
-    const file = await getFile(params.id);
+    const file = await getFile(env.DB, params.id);
     if (!file || file.owner_id !== user.id) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    // Soft delete (setting status=trashed is handled by deleteFile if it follows pattern)
-    await deleteFile(params.id, user.id);
+    await deleteFile(env.DB, params.id, user.id);
 
     return NextResponse.json({ message: 'File moved to trash' });
   } catch (error) {

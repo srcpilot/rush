@@ -20,7 +20,7 @@ export default function FolderCard({ folder, onClick }: FolderCardProps) {
         </svg>
       </div>
       <div className="text-sm font-medium text-gray-200 truncate">{folder.name}</div>
-      <div className="text-xs text-muted-foreground mt-1">{folder.fileCount || 0} items</div>
+      <div className="text-xs text-muted-foreground mt-1">{folder.depth || 0} items</div>
     </div>
   );
 }

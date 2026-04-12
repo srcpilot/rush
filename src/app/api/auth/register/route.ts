@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCloudflareContext } from 'cloudflare:workers';
 import { createUser, getUserByEmail } from '@/lib/db.js';
 import { hashPassword, createToken } from '@/lib/auth.js';
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, name, password } = await req.json();
+    const { email, name, password } = await req.json() as { email: string; name: string; password: string };
 
     if (!email || !name || !password) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -18,19 +19,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Name too short' }, { status: 400 });
     }
 
-    const existingUser = await getUserByEmail(email);
+    const { env } = getCloudflareContext();
+    const existingUser = await getUserByEmail(env.DB, email);
     if (existingUser) {
       return NextResponse.json({ error: 'Email already exists' }, { status: 409 });
     }
 
     const passwordHash = await hashPassword(password);
-    const user = await createUser({
+    const user = await createUser(env.DB, {
       email,
       name,
       password_hash: passwordHash,
     });
 
-    const token = await createToken(user);
+    const secret = env.JWT_SECRET || 'CHANGE_ME_IN_PRODUCTION';
+    const token = createToken(user.id, secret);
 
     const { password_hash, ...userWithoutPassword } = user;
 

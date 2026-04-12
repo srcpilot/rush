@@ -69,7 +69,23 @@ export function withAuth(handler: (userId: number, request: Request) => Promise<
   };
 }
 
-export async function getAuthUser(db: any, userId: number): Promise<RushUser | null> {
-  // This is a helper for the handler to get full user info if needed
+export async function getAuthUser(db: any, userId: number): Promise<RushUser | null>;
+export async function getAuthUser(request: Request, env: Env): Promise<RushUser | null>;
+export async function getAuthUser(dbOrRequest: any, userIdOrEnv: any): Promise<RushUser | null> {
+  // Overload 1: called with (request, env) — extract userId from token then look up user
+  if (dbOrRequest instanceof Request) {
+    const request = dbOrRequest;
+    const env: Env = userIdOrEnv;
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+    const token = authHeader.substring(7);
+    const secret = env.JWT_SECRET || 'CHANGE_ME_IN_PRODUCTION';
+    const decoded = verifyToken(token, secret);
+    if (!decoded) return null;
+    return env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(decoded.userId).first();
+  }
+  // Overload 2: called with (db, userId) — direct lookup
+  const db = dbOrRequest;
+  const userId: number = userIdOrEnv;
   return await db.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
 }

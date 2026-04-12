@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCloudflareContext } from 'cloudflare:workers';
 import { getFile } from '@/lib/db.js';
 import { getAuthUser } from '@/lib/auth.js';
 import { streamFile } from '@/lib/r2.js';
-import { getCloudflareContext } from 'cloudflare:workers';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { env } = getCloudflareContext();
@@ -13,14 +13,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
-    const file = await getFile(params.id);
+    const file = await getFile(env.DB, params.id);
     if (!file || file.owner_id !== user.id) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
     const stream = await streamFile(env.R2_BUCKET, file.r2_key);
-    
-    return new NextResponse(stream, {
+
+    return new NextResponse(stream as unknown as BodyInit, {
       headers: {
         'Content-Type': file.mime_type,
         'Content-Disposition': `attachment; filename="${file.name}"`,

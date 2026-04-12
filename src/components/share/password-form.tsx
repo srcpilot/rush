@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils.js";
 
 interface PasswordFormProps {
   token: string;
@@ -31,7 +31,7 @@ export function PasswordForm({ token }: PasswordFormProps) {
         // For this task, we'll just refresh to show the content.
         router.refresh();
       } else {
-        const data = await res.json();
+        const data = await res.json() as { message?: string };
         setError(data.message || "Invalid password");
       }
     } catch (err) {

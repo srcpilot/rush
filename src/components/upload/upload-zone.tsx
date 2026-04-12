@@ -1,7 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils.js';
-import type { UploadSession, RushFile } from '@/lib/types.js';
-import { useUploadManager } from './upload-context.js'; // We'll create this if needed, or assume a singleton
 
 export function UploadZone({ onFilesSelected }: { onFilesSelected?: (files: File[]) => void }) {
   const [isDragActive, setIsDragActive] = useState(false);

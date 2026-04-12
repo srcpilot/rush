@@ -1,3 +1,5 @@
+import type { FileStatus } from './types.js';
+
 export interface RushFile {
   id: number;
   name: string;

@@ -13,7 +13,7 @@ export class UploadManager {
 
   async uploadFile(
     file: File,
-    folderId?: number,
+    folderId: number | undefined,
     onProgress: (pct: number) => void
   ): Promise<RushFile> {
     const controller = new AbortController();
@@ -34,7 +34,7 @@ export class UploadManager {
       });
 
       if (!sessionRes.ok) throw new Error('Failed to initiate upload session');
-      const { session_id } = await sessionRes.json();
+      const { session_id } = await sessionRes.json() as { session_id: string };
 
       // 2. Upload chunks
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);

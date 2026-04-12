@@ -1,16 +1,24 @@
-import { FilePreview } from "@/components/share/file-preview";
-import { PasswordForm } from "@/components/share/password-form";
-import { cn } from "@/lib/utils";
+import { FilePreview } from "@/components/share/file-preview.js";
+import { PasswordForm } from "@/components/share/password-form.js";
+import { cn } from "@/lib/utils.js";
 
 type ShareStatus = "loading" | "public" | "password" | "error" | "expired";
 
+interface ShareData {
+  access?: string;
+  name?: string;
+  size?: number;
+  mimeType?: string;
+  url?: string;
+}
+
 async function getShare(token: string) {
   const res = await fetch(`/api/shares/${token}`);
-  if (res.status === 410) return { status: "expired" as const };
-  if (res.status === 404) return { status: "not_found" as const };
-  if (!res.ok) return { status: "error" as const };
-  
-  const data = await res.json();
+  if (res.status === 410) return { status: "expired" as const, data: undefined as ShareData | undefined };
+  if (res.status === 404) return { status: "not_found" as const, data: undefined as ShareData | undefined };
+  if (!res.ok) return { status: "error" as const, data: undefined as ShareData | undefined };
+
+  const data = await res.json() as ShareData;
   return {
     status: (data.access === "password" ? "password" : "public") as ShareStatus,
     data,
@@ -64,14 +72,14 @@ export default async function SharePage({ params }: { params: { token: string } 
             <div className="space-y-6">
               <div className="text-center space-y-2">
                 <h1 className="text-3xl font-bold tracking-tight">
-                  {share.data.name || "Shared File"}
+                  {share.data?.name || "Shared File"}
                 </h1>
                 <p className="text-muted-foreground">
-                  {share.data.size ? `${(share.data.size / 1024 / 1024).toFixed(2)} MB` : "File"}
+                  {share.data?.size ? `${(share.data.size / 1024 / 1024).toFixed(2)} MB` : "File"}
                 </p>
               </div>
-              
-              <FilePreview file={share.data} downloadUrl={`/api/shares/${token}/download`} />
+
+              <FilePreview file={share.data ?? {}} downloadUrl={`/api/shares/${token}/download`} />
             </div>
           )}
         </div>

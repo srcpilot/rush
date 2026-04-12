@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCloudflareContext } from 'cloudflare:workers';
 import { getAuthUser } from '@/lib/auth.js';
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthUser(req);
-    
+    const { env } = getCloudflareContext();
+    const user = await getAuthUser(req, env);
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

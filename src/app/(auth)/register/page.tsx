@@ -51,14 +51,13 @@ export default function RegisterPage() {
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json() as { token?: string; user?: any; message?: string };
 
       if (!res.ok) {
         throw new Error(data.message || 'Registration failed');
       }
 
-      // On success, log them in
-      await login(data.token, data.user);
+      await login(data.token!, data.user);
       router.push('/');
     } catch (err: any) {
       setError(err.message);

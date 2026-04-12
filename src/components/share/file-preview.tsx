@@ -1,11 +1,10 @@
 "use client";
 
-import Image from "next/image";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils.js";
 
 interface FilePreviewProps {
   file: {
-    name: string;
+    name?: string;
     size?: number;
     mimeType?: string;
     url?: string;
@@ -32,12 +31,10 @@ export function FilePreview({ file, downloadUrl }: FilePreviewProps) {
       <div className="w-full flex flex-col items-center justify-center space-y-4">
         {isImage && (
           <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-lg border bg-muted">
-            <Image
+            <img
               src={file.url || ""}
-              alt={file.name}
-              fill
-              className="object-contain"
-              unoptimized
+              alt={file.name || ""}
+              className="object-contain w-full h-full"
             />
           </div>
         )}
@@ -62,9 +59,9 @@ export function FilePreview({ file, downloadUrl }: FilePreviewProps) {
 
         {isPdf && (
           <div className="w-full aspect-[3/4] max-w-md overflow-hidden rounded-lg border bg-muted flex items-center justify-center">
-             <p className="text-sm text-muted-foreground text-center p-4">
-                PDF preview not available. Please download to view.
-             </p>
+            <p className="text-sm text-muted-foreground text-center p-4">
+              PDF preview not available. Please download to view.
+            </p>
           </div>
         )}
 

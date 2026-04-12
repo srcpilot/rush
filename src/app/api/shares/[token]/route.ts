@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFile, getFolder } from '@/lib/db.js';
-import { Share, ShareAccess } from '../share.js';
+import type { ShareAccess } from '@/lib/types.js';
 
 // In a real implementation, we would fetch the share from the DB using the token
 // For this task, we assume the existence of a database layer.
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
   const { token } = params;
   
   try {
-    const body = await req.json();
+    const body = await req.json() as { password?: string };
     const { password } = body;
 
     // 1. Fetch share from DB

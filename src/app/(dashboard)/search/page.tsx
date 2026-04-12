@@ -4,14 +4,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context.js';
 import type { RushFile } from '@/lib/types.js';
-import SearchInput from '@/components/search-input';
 import { cn } from '@/lib/utils.js';
 
 export default function SearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { token } = useAuth();
-  
+
   const query = searchParams.get('q') || '';
   const [searchQuery, setSearchQuery] = useState(query);
   const [results, setResults] = useState<RushFile[]>([]);
@@ -30,9 +29,9 @@ export default function SearchPage() {
           Authorization: `Bearer ${token}`,
         },
       });
-      
+
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as RushFile[];
         setResults(data);
       } else {
         setResults([]);
@@ -45,12 +44,10 @@ export default function SearchPage() {
     }
   }, [token]);
 
-  // Sync query from URL to state
   useEffect(() => {
     setSearchQuery(query);
   }, [query]);
 
-  // Handle search input change and sync to URL
   const handleSearchChange = (newQuery: string) => {
     setSearchQuery(newQuery);
     const params = new URLSearchParams(searchParams.toString());
@@ -62,8 +59,6 @@ export default function SearchPage() {
     router.replace(`?${params.toString()}`);
   };
 
-  // Trigger fetch when debounced search query changes
-  // Note: SearchInput handles the 300ms debounce and calls handleSearchChange
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchResults(searchQuery);
@@ -74,11 +69,13 @@ export default function SearchPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="max-w-3xl mx-auto">
-        <SearchInput 
-          value={searchQuery} 
-          onChange={handleSearchChange} 
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => handleSearchChange(e.target.value)}
           placeholder="Type to search your files"
           autoFocus
+          className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
         />
       </div>
 
@@ -104,18 +101,17 @@ export default function SearchPage() {
         {!isLoading && results.length > 0 && (
           <div className="space-y-2">
             {results.map((file) => (
-              <div 
+              <div
                 key={file.id}
                 className="flex items-center p-3 hover:bg-accent rounded-lg transition-colors cursor-pointer"
               >
                 <div className="mr-4">
-                  {/* Simple icon representation */}
-                  <span className="text-xl">📄</span>
+                  <span className="text-xl">&#x1F4C4;</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{file.name}</div>
                   <div className="text-sm text-muted-foreground truncate">
-                    {file.path}
+                    {file.r2_key}
                   </div>
                 </div>
                 <div className="ml-4 text-sm text-muted-foreground text-right">
@@ -123,7 +119,7 @@ export default function SearchPage() {
                     {file.size ? `${(file.size / 1024).toFixed(1)} KB` : '--'}
                   </div>
                   <div className="text-xs">
-                    {new Date(file.updatedAt).toLocaleDateString()}
+                    {file.updated_at ? new Date(file.updated_at).toLocaleDateString() : ''}
                   </div>
                 </div>
               </div>
