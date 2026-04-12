@@ -1,34 +1,34 @@
-import { LoginInput } from "../../../lib/auth/index";
-import { verifyCorrected } from "../../../lib/auth/password";
-import { createSession } from "../../../lib/auth/session";
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserByEmail } from '@/lib/db.js';
+import { verifyPassword, createToken } from '@/lib/auth.js';
 
-export async function handleLogin(request: Request, env: any): Promise<Response> {
+export async function POST(req: NextRequest) {
   try {
-    const body: LoginInput = await request.json();
+    const { email, password } = await req.json();
 
-    const user = await env.DB.prepare("SELECT id, email, name, password_hash FROM users WHERE email = ?")
-      .bind(body.email)
-      .first<{ id: number, email: string, name: string, password_hash: string }>();
-
-    if (!user || !(await verifyCorrected(body.password, user.password_hash))) {
-      return new Response(JSON.stringify({ error: "Invalid email or password" }), { status: 401 });
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    const token = await createSession(env, { id: user.id, email: user.email, name: user.name });
+    const user = await getUserByEmail(email);
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    }
 
-    return new Response(JSON.stringify({ 
-      id: user.id, 
-      email: user.email, 
-      name: user.name,
-      token 
-    }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Set-Cookie": `rush_session=${token}; HttpOnly; Secure; SameSite=Lax; Path=/`
-      }
+    const isValid = await verifyPassword(password, user.password_hash);
+    if (!isValid) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    }
+
+    const token = await createToken(user);
+
+    const { password_hash, ...userWithoutPassword } = user;
+
+    return NextResponse.json({
+      token,
+      user: userWithoutPassword,
     });
-  } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
