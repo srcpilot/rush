@@ -1,27 +1,55 @@
-import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "@/lib/auth"; // Assuming existence based on ProjectFacts
+import { NextRequest, NextResponse } from 'next/server';
+import type { RushFile } from '@/lib/types.js';
+import { listFiles, createFile } from '@/lib/db.js';
+import { getAuthUser } from '@/lib/auth.js';
+import { getCloudflareContext } from 'cloudflare:workers';
 
-export const GET = withAuth(async (req: NextRequest) => {
-  const { searchParams } = new URL(req.url);
-  const folderId = searchParams.get("folder_id");
-  const page = parseInt(searchParams.get("page") || "1");
-  const limit = parseInt(searchParams.get("limit") || "20");
+export async function GET(request: NextRequest) {
+  const { env } = getCloudflareContext();
+  const user = await getAuthUser(request, env);
+  
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-  const userId = (req as any).user.id;
+  const { searchParams } = request.nextUrl;
+  const folderId = searchParams.get('folder_id');
 
-  // Logic to fetch from D1
-  // SELECT * FROM files WHERE userId = ? AND (folderId = ? OR folderId IS NULL) AND status = 'active'
-  // LIMIT ? OFFSET ?
+  try {
+    const files = await listFiles(user.id, folderId);
+    return NextResponse.json({ files });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to list files' }, { status: 500 });
+  }
+}
 
-  // Mock response
-  const files = [];
-  const folders = [];
-  const pagination = {
-    page,
-    limit,
-    total: 0,
-    hasMore: false,
-  };
+export async function POST(request: NextRequest) {
+  const { env } = getCloudflareContext();
+  const user = await getAuthUser(request, env);
 
-  return NextResponse.json({ files, folders, pagination });
-});
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { name, folder_id, r2_key, size, mime_type } = body;
+
+    if (!name || !r2_key || !size || !mime_type) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const file = await createFile({
+      owner_id: user.id,
+      name,
+      folder_id,
+      r2_key,
+      size,
+      mime_type,
+    });
+
+    return NextResponse.json(file, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to create file' }, { status: 500 });
+  }
+}

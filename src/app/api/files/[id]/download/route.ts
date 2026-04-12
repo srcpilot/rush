@@ -1,21 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "@/lib/auth";
-import { getPresignedDownloadUrl } from "@/lib/files/presign";
+import { NextRequest, NextResponse } from 'next/server';
+import { getFile } from '@/lib/db.js';
+import { getAuthUser } from '@/lib/auth.js';
+import { streamFile } from '@/lib/r2.js';
+import { getCloudflareContext } from 'cloudflare:workers';
 
-export const GET = withAuth(async (req: NextRequest, context: any) => {
-  const { id } = context.params;
-  
-  // In a real app, we'd fetch file metadata from D1 first
-  // For now, we simulate finding a file
-  const file = {
-    id,
-    r2Key: `user_123/${id}/some_file.dat`
-  };
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  const { env } = getCloudflareContext();
+  const user = await getAuthUser(request, env);
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   try {
-    const downloadUrl = await getPresignedDownloadUrl((req as any).env, file.r2Key);
-    return NextResponse.redirect(downloadUrl);
-  } catch (e) {
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    const file = await getFile(params.id);
+    if (!file || file.owner_id !== user.id) {
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
+    }
+
+    const stream = await streamFile(env.R2_BUCKET, file.r2_key);
+    
+    return new NextResponse(stream, {
+      headers: {
+        'Content-Type': file.mime_type,
+        'Content-Disposition': `attachment; filename="${file.name}"`,
+      },
+    });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to download file' }, { status: 500 });
   }
-});
+}
