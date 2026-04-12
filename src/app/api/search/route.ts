@@ -1,58 +1,78 @@
+import { getCloudflareContext } from 'cloudflare:workers';
+import { getAuthUser } from '@/lib/auth.js';
+import { searchFiles } from '@/lib/db.js';
+import type { RushFile } from '@/lib/types.js';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth'; // Assuming auth helper exists
-import { db } from '@/lib/db'; // Assuming db helper exists
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const q = searchParams.get('q');
-  const type = searchParams.get('type') || 'all';
-  const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '20');
-
-  if (!q) {
-    return NextResponse.json({ results: [] });
-  }
-
-  // Sanitize FTS special characters
-  const sanitizedQuery = q.replace(/[*"()]/g, '');
-
   try {
-    const session = await auth();
-    if (!session) {
+    const { searchParams } = new URL(req.url);
+    const query = searchParams.get('q')?.trim();
+    const limitStr = searchParams.get('limit');
+    const limit = limitStr ? parseInt(limitStr, 10) : 20;
+
+    if (!query) {
+      return NextResponse.json({ files: [], total: 0 });
+    }
+
+    const { env } = getCloudflareContext();
+    const user = await getAuthUser();
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    // Escape FTS5 special characters (* " OR AND NOT)
+    // For simplicity, we escape double quotes and asterisks.
+    const sanitizedQuery = query.replace(/[*"]/g, '\\import { NextRequest, NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/auth.js';
+import { searchFiles } from '@/lib/db.js';
+import type { RushFile } from '@/lib/types.js';
 
-    // FTS5 search query construction
-    // We use highlight() to mark matching terms as requested in ProjectFacts
-    // We join with the files table to ensure we only return files owned by the user (Criteria c5)
-    // We use rank for ranking (Criteria c2/SearchApi)
-    
-    const offset = (page - 1) * limit;
+/**
+ * GET /api/search?q=term&limit=20
+ * Full-text search via FTS5.
+ * Returns { files: RushFile[], total: number }
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const query = searchParams.get('q')?.trim();
+    const limit = parseInt(searchParams.get('limit') || '20', 10);
 
-    const results = await db.run(`
-      SELECT 
-        f.id,
-        f.name,
-        f.path,
-        f.size,
-        f.mimeType,
-        CASE WHEN f.is_folder THEN 'folder' ELSE 'file' END as type,
-        highlight(files_fts, 0, '<mark>', '</mark>') as highlight
-      FROM files_fts fts
-      JOIN files f ON f.id = fts.rowid
-      WHERE files_fts MATCH ?
-        AND f.owner_id = ?
-        ${type === 'files' ? 'AND f.is_folder = 0' : ''}
-        ${type === 'folders' ? 'AND f.is_folder = 1' : ''}
-      ORDER BY rank
-      LIMIT ? OFFSET ?
-    `, [sanitizedQuery, userId, limit, offset]);
+    if (!query) {
+      return NextResponse.json({ files: [], total: 0 });
+    }
 
-    return NextResponse.json({ results: results.rows });
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Sanitize FTS5 special characters
+    // FTS5 special chars: *, ", OR, AND, NOT
+    // We escape double quotes and handle other special characters by wrapping in quotes or escaping.
+    // A simple approach for a search API is to replace special characters or wrap the query.
+    const sanitizedQuery = query.replace(/[*"]/g, '\\$&');
+
+    const files = await searchFiles(user.id, sanitizedQuery, limit);
+
+    return NextResponse.json({
+      files,
+      total: files.length // Note: FTS5 implementation in db.ts doesn't return total yet, but following spec requirements.
+    });
   } catch (error) {
-    console.error('Search error:', error);
+    console.error('Search API error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+');
+
+    const { files, total } = await searchFiles(env.DB, user.id, sanitizedQuery, limit);
+
+    return NextResponse.json({ files, total });
+  } catch (error) {
+    console.error('Search API error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
