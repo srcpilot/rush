@@ -1,4 +1,10 @@
-import React from 'react';
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Rush",
+  description: "Speed-focused file management",
+};
 
 export default function RootLayout({
   children,
@@ -6,8 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className="dark">
+      <body className="antialiased">{children}</body>
     </html>
   );
 }
