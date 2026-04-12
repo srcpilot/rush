@@ -1,38 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import { FolderService } from '@/lib/folders';
+import type { Folder } from '@/lib/types.js';
+import { listFolders, createFolder } from '@/lib/db.js';
+import { getAuthUser } from '@/lib/auth.js';
 
-// Note: In a real implementation, FolderService would be injected or retrieved via a container.
-// For the purpose of this task, we assume a global or singleton instance.
-const folderService: FolderService = {} as any; 
-
-export const GET = withAuth(async (req: NextRequest) => {
-  const { searchParams } = new URL(req.url);
-  const parentId = searchParams.get('parent_id');
-  
+export async function GET(request: NextRequest) {
   try {
-    const folders = await folderService.list(parentId || null);
-    return NextResponse.json(folders);
+    const user = await getAuthUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const parentId = searchParams.get('parent_id');
+
+    const folders: Folder[] = await listFolders(parentId);
+    return NextResponse.json({ folders });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch folders' }, { status: 500 });
   }
-});
+}
 
-export const POST = withAuth(async (req: NextRequest) => {
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
-    const { name, parentId } = body;
-
-    if (!name) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    const user = await getAuthUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Prevent circular reference if parentId is same as current? 
-    // (Not applicable on create, but relevant for move)
+    const body = await request.json();
+    const { name, parent_id } = body;
 
-    const folder = await folderService.create({ name, parentId: parentId || null });
-    return NextResponse.json(folder, { status: 201 });
+    if (!name || typeof name !== 'string' || name.trim().length === 0 || name.length > 255) {
+      return NextResponse.json({ error: 'Invalid folder name' }, { status: 400 });
+    }
+
+    const newFolder = await createFolder({
+      name: name.trim(),
+      parent_id: parent_id || null,
+    });
+
+    return NextResponse.json(newFolder, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create folder' }, { status: 500 });
   }
-});
+}
