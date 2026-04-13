@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { RushUser } from './rush-user';
+import { RushUser } from '@/lib/rush-user';
 
 interface AuthContextType {
   user: RushUser | null;
@@ -25,17 +25,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (savedToken) {
         try {
           const response = await fetch('/api/auth/me', {
-            headers: { Authorization: `Bearer ${savedToken}` },
+            headers: {
+              Authorization: `Bearer ${savedToken}`,
+            },
           });
+
           if (response.ok) {
-            const userData = await response.json() as RushUser;
+            const userData = await response.json();
             setUser(userData);
             setToken(savedToken);
           } else {
             localStorage.removeItem('rush_token');
           }
         } catch (error) {
-          console.error('Failed to restore session', error);
+          console.error('Failed to restore session:', error);
           localStorage.removeItem('rush_token');
         }
       }
@@ -52,13 +55,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
 
-    if (!response.ok) throw new Error('Login failed');
+    if (!response.ok) {
+      throw new Error('Login failed');
+    }
 
-    const data = await response.json() as { token: string; user: RushUser };
-    const { token: newToken, user: newUser } = data;
+    const data = await response.json();
+    const { user, token: newToken } = data;
 
+    setUser(user);
     setToken(newToken);
-    setUser(newUser);
     localStorage.setItem('rush_token', newToken);
   };
 
@@ -69,19 +74,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, name, password }),
     });
 
-    if (!response.ok) throw new Error('Registration failed');
+    if (!response.ok) {
+      throw new Error('Registration failed');
+    }
 
-    const data = await response.json() as { token: string; user: RushUser };
-    const { token: newToken, user: newUser } = data;
+    const data = await response.json();
+    const { user, token: newToken } = data;
 
+    setUser(user);
     setToken(newToken);
-    setUser(newUser);
     localStorage.setItem('rush_token', newToken);
   };
 
   const logout = () => {
-    setToken(null);
     setUser(null);
+    setToken(null);
     localStorage.removeItem('rush_token');
   };
 
@@ -92,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
