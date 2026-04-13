@@ -1,14 +1,13 @@
 export interface UploadSession {
-  id: number;
-  file_name: string;
-  file_key: string;
-  upload_id: string;
+  id: string;
+  user_id: number;
+  filename: string;
+  size: number;
+  mime_type: string;
+  r2_upload_id: string;
+  parts_completed: number;
   total_parts: number;
-  completed_parts: number;
-  total_bytes: number;
-  folder_id?: number;
-  status: 'pending' | 'uploading' | 'completing' | 'done' | 'failed';
-  owner_id: number;
-  created_at: string;
-  updated_at: string;
+  status: 'pending' | 'active' | 'complete' | 'aborted';
+  created_at: Date;
+  updated_at: Date;
 }
