@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import type { ChangeEvent, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
@@ -15,7 +14,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
@@ -23,9 +22,8 @@ export default function LoginPage() {
     try {
       await login(email, password);
       router.push('/');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to login. Please try again.';
-      setError(msg);
+    } catch (err: any) {
+      setError(err.message || 'Failed to login. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -35,7 +33,7 @@ export default function LoginPage() {
     <div className="w-full max-w-sm">
       <div className="bg-[#141414] border border-[#262626] rounded-xl p-8">
         <h1 className="text-2xl font-semibold text-[#f5f0e8] mb-6 text-center">Login</h1>
-
+        
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-[#a3a3a0] mb-1">
@@ -46,7 +44,7 @@ export default function LoginPage() {
               type="email"
               required
               value={email}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-[#0a0a0a] border border-[#262626] rounded-lg px-4 py-2 text-[#f5f0e8] focus:outline-none focus:border-[#d4a853] transition-colors"
               placeholder="you@example.com"
             />
@@ -61,7 +59,7 @@ export default function LoginPage() {
               type="password"
               required
               value={password}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-[#0a0a0a] border border-[#262626] rounded-lg px-4 py-2 text-[#f5f0e8] focus:outline-none focus:border-[#d4a853] transition-colors"
               placeholder="••••••••"
             />
@@ -74,17 +72,17 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-[#d4a853] hover:bg-[#b89446] text-[#0a0a0a] font-semibold py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#d4a853] hover:bg-[#b8954a] text-[#0a0a0a] font-semibold py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-[#a3a3a0]">
+          <p className="text-[#a3a3a0] text-sm">
             Don't have an account?{' '}
             <Link href="/register" className="text-[#d4a853] hover:underline">
-              Register
+              Register →
             </Link>
           </p>
         </div>
