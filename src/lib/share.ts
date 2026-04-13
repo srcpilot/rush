@@ -1,5 +1,3 @@
-import type { ShareAccess } from './types.js';
-
 export interface Share {
   id: number;
   file_id: number;
