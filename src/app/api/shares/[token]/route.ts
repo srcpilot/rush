@@ -1,65 +1,51 @@
+import { getCloudflareContext } from 'cloudflare:workers';
 import { NextRequest, NextResponse } from 'next/server';
-import { getFile, getFolder } from '@/lib/db.js';
-import type { ShareAccess } from '@/lib/types.js';
+import { getShareByToken, getFile, incrementShareDownload } from '@/lib/db.js';
+import { isExpired } from '@/lib/utils.js';
+import { getObject } from '@/lib/r2.js';
 
-// In a real implementation, we would fetch the share from the DB using the token
-// For this task, we assume the existence of a database layer.
-
-export async function GET(req: NextRequest, { params }: { params: { token: string } }) {
-  const { token } = params;
-
+export async function GET(req: NextRequest) {
   try {
-    // 1. Fetch share from DB
-    // const share = await db.share.findUnique({ where: { token } });
-    // if (!share) return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+    const { env } = getCloudflareContext();
+    const url = new URL(req.url);
+    const token = url.pathname.split('/').pop();
 
-    // 2. Check expiry (ProjectFacts)
-    // if (share.expires_at && new Date(share.expires_at) < new Date()) {
-    //   return NextResponse.json({ error: 'Expired' }, { status: 410 });
-    // }
+    if (!token) {
+      return NextResponse.json({ error: 'Token required' }, { status: 400 });
+    }
 
-    // 3. Check download limit (ProjectFacts)
-    // if (share.max_downloads && share.downloads >= share.max_downloads) {
-    //   return NextResponse.json({ error: 'Limit reached' }, { status: 410 });
-    // }
+    const share = await getShareByToken(env.DB, token);
+    if (!share) {
+      return NextResponse.json({ error: 'Share not found' }, { status: 404 });
+    }
 
-    // 4. Return metadata if public
-    // if (share.access === 'public') {
-    //   const metadata = share.file_id 
-    //     ? await getFile(share.file_id) 
-    //     : await getFolder(share.folder_id);
-    //   return NextResponse.json(metadata);
-    // }
+    if (isExpired(share.expires_at)) {
+      return NextResponse.json({ error: 'Share expired' }, { status: 410 });
+    }
 
-    // If password protected, GET returns nothing or a "password required" status
-    return NextResponse.json({ message: 'Password required' }, { status: 403 });
+    if (share.max_downloads && share.downloads >= share.max_downloads) {
+      return NextResponse.json({ error: 'Download limit reached' }, { status: 410 });
+    }
 
+    let fileInfo = null;
+    if (share.file_id) {
+      fileInfo = await getFile(env.DB, share.file_id);
+    }
+
+    // Remove sensitive info
+    const { password_hash, ...publicShare } = share;
+
+    return NextResponse.json({
+      ...publicShare,
+      file: fileInfo ? {
+        id: fileInfo.id,
+        name: fileInfo.name,
+        size: fileInfo.size,
+        type: fileInfo.type
+      } : null
+    });
   } catch (error) {
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  }
-}
-
-export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
-  const { token } = params;
-  
-  try {
-    const body = await req.json() as { password?: string };
-    const { password } = body;
-
-    // 1. Fetch share from DB
-    // const share = await db.share.findUnique({ where: { token } });
-    // if (!share) return NextResponse.json({ error: 'Not Found' }, { status: 404 });
-
-    // 2. Verify password
-    // if (share.access === 'password_protected') {
-    //   const isValid = await verifyPassword(password, share.password_hash);
-    //   if (!isValid) return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
-    // }
-
-    // 3. Return success or session/token
-    return NextResponse.json({ success: true });
-
-  } catch (error) {
+    console.error('Error verifying share:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

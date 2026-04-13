@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { getCloudflareContext } from 'cloudflare:workers';
-import { getAuthUser } from '@/lib/auth.js';
-import { generateToken } from '@/lib/utils.js';
-import type { Share } from '@/lib/types.js';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthUser, hashPassword } from '@/lib/auth.js';
+import { generateToken, isExpired } from '@/lib/utils.js';
+import { createShare, getShareByToken, getFile, incrementShareDownload } from '@/lib/db.js';
+import { getObject } from '@/lib/r2.js';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,32 +13,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json() as { file_id?: number; folder_id?: number; access?: string; password?: string; expires_in_hours?: number; max_downloads?: number };
-    const { file_id, folder_id, access, password, expires_in_hours, max_downloads } = body;
+    const body = await req.json();
+    const { fileId, folderId, access, password, expiresAt, maxDownloads } = body;
 
-    if (!file_id && !folder_id) {
-      return NextResponse.json({ error: 'file_id or folder_id required' }, { status: 400 });
+    if (!fileId && !folderId) {
+      return NextResponse.json({ error: 'Either fileId or folderId required' }, { status: 400 });
     }
 
     const token = generateToken();
+    const id = crypto.randomUUID();
+    const password_hash = password ? await hashPassword(password) : null;
 
-    const expires_at = expires_in_hours
-      ? new Date(Date.now() + expires_in_hours * 60 * 60 * 1000).toISOString()
-      : undefined;
-
-    const newShare: Partial<Share> = {
+    const newShare = {
+      id,
       token,
-      file_id: file_id || undefined,
-      folder_id: folder_id || undefined,
-      access: (access === 'password' ? 'password' : 'public') as 'public' | 'password',
-      password_hash: password ? 'hashed_password_placeholder' : undefined,
-      expires_at,
-      max_downloads: max_downloads || undefined,
+      file_id: fileId || null,
+      folder_id: folderId || null,
+      access: access || 'public',
+      password_hash,
+      expires_at: expiresAt ? new Date(expiresAt) : null,
+      max_downloads: maxDownloads ? parseInt(maxDownloads) : null,
       downloads: 0,
-      created_by: user.id,
+      created_at: new Date().toISOString(),
     };
 
-    // DB insert would go here
+    await createShare(env.DB, newShare);
 
     return NextResponse.json({
       token,
