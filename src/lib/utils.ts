@@ -2,7 +2,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 /**
- * Combines clsx and tailwind-merge for conditional class names.
+ * Combines clsx and tailwind-merge to merge class names safely.
  */
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
@@ -20,7 +20,7 @@ export function formatBytes(bytes: number, decimals: number = 2): string {
 
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
 /**
