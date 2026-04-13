@@ -16,25 +16,25 @@ export async function GET(request: NextRequest) {
   const limitParam = searchParams.get('limit');
   const limit = limitParam ? parseInt(limitParam, 10) : 20;
 
-  if (!q || q.trim() === '') {
+  if (!q || q.trim().length === 0) {
     return NextResponse.json({ error: 'Query parameter "q" is required' }, { status: 400 });
   }
 
-  // Sanitize query for FTS5 MATCH
-  // Wrap each word in double quotes and escape existing double quotes
-  const sanitizedQuery = q
+  // Sanitize query for FTS5: wrap each word in double quotes and escape existing double quotes
+  // This prevents malformed query errors in FTS5 MATCH
+  const sanitizedQ = q
     .trim()
     .split(/\s+/)
     .map(word => `"${word.replace(/"/g, '')}"`)
     .join(' ');
 
   try {
-    const results = await searchFiles(env.DB, user.id, sanitizedQuery, limit);
+    const { results, count } = await searchFiles(env.DB, user.id, sanitizedQ, limit);
 
     return NextResponse.json({
       results,
       query: q,
-      count: results.length,
+      count
     });
   } catch (error) {
     console.error('Search error:', error);
