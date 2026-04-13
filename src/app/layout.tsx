@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata } from 'vinext';
 import { Inter } from "next/font/google";
 import "@/app/globals.css";
 import { Providers } from "@/components/providers";
