@@ -13,9 +13,12 @@ export async function GET(request: NextRequest) {
 
     const { password_hash, ...userWithoutPassword } = user;
 
-    return NextResponse.json({ user: userWithoutPassword });
+    return NextResponse.json({
+      data: {
+        user: userWithoutPassword,
+      },
+    });
   } catch (error) {
-    console.error('Me error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
