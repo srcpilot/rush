@@ -1,15 +1,12 @@
-import type { ShareAccess } from './types.js';
-
 export interface Share {
   id: number;
+  user_id: number;
   file_id?: number;
   folder_id?: number;
   token: string;
-  access: ShareAccess;
   password_hash?: string;
-  expires_at?: string;
-  downloads: number;
+  expires_at?: Date;
   max_downloads?: number;
-  created_by: number;
-  created_at: string;
+  download_count: number;
+  created_at: Date;
 }
