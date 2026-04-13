@@ -4,7 +4,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { FileCard } from '@/components/file-card';
-import type { RushFile } from '@/lib/types';
+
+interface RushFile {
+  id: string;
+  name: string;
+  path: string;
+  size: number;
+  updatedAt: string;
+  type: string;
+}
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -12,12 +20,12 @@ export default function SearchPage() {
   const { token } = useAuth();
 
   const queryParam = searchParams.get('q') || '';
-
+  
   const [query, setQuery] = useState(queryParam);
   const [results, setResults] = useState<RushFile[]>([]);
   const [loading, setLoading] = useState(false);
-
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   const fetchResults = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) {
@@ -34,8 +42,8 @@ export default function SearchPage() {
       });
 
       if (response.ok) {
-        const data = await response.json() as { results: RushFile[] };
-        setResults(data.results);
+        const data = await response.json();
+        setResults(data);
       } else {
         setResults([]);
       }
@@ -47,41 +55,56 @@ export default function SearchPage() {
     }
   }, [token]);
 
-  // Handle URL param changes (e.g. back/forward button)
+  // Handle URL sync and initial load
   useEffect(() => {
-    setQuery(queryParam);
-    fetchResults(queryParam);
-  }, [queryParam, fetchResults]);
+    if (queryParam !== query) {
+      setQuery(queryParam);
+    }
+  }, [queryParam]);
 
-  // Debounced input handling
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setQuery(newValue);
-
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
+  // Debounced search effect
+  useEffect(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
     }
 
-    debounceTimerRef.current = setTimeout(() => {
+    if (query === queryParam) return;
+
+    debounceTimer.current = setTimeout(() => {
       // Update URL
       const params = new URLSearchParams(searchParams.toString());
-      if (newValue) {
-        params.set('q', newValue);
+      if (query) {
+        params.set('q', query);
       } else {
         params.delete('q');
       }
-      router.replace(`?${params.toString()}`);
-
-      // Fetch results
-      fetchResults(newValue);
+      router.replace(`?${params.toString()}`, { scroll: false });
+      
+      // Fetch
+      fetchResults(query);
     }, 300);
+
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [query, queryParam, router, searchParams, fetchResults]);
+
+  // Initial fetch if query is present in URL on mount
+  useEffect(() => {
+    if (queryParam) {
+      fetchResults(queryParam);
+    }
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
   };
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-semibold text-[#fafaf5] mb-6">Search</h1>
-
+    <div className="min-h-screen p-6 text-[#fafaf5]">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-2xl font-semibold mb-6">Search</h1>
+        
         <div className="relative">
           <input
             type="text"
