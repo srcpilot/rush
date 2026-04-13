@@ -11,7 +11,7 @@ export function generateFileKey(userId: number, filename: string): string {
 }
 
 /**
- * Streams a file from R2.
+ * Streams a file from an R2 bucket.
  * Returns null if the object is not found.
  */
 export async function streamFile(
@@ -59,7 +59,7 @@ export async function uploadPart(
   partNumber: number,
   body: ReadableStream | ArrayBuffer
 ): Promise<R2UploadedPart> {
-  const upload = await bucket.resumeMultipartUpload(key, uploadId);
+  const upload = await bucket.getMultipartUpload(key, uploadId);
   const part = await upload.uploadPart(partNumber, body);
   return part;
 }
@@ -73,18 +73,18 @@ export async function completeMultipartUpload(
   uploadId: string,
   parts: R2UploadedPart[]
 ): Promise<void> {
-  const upload = await bucket.resumeMultipartUpload(key, uploadId);
+  const upload = await bucket.getMultipartUpload(key, uploadId);
   await upload.complete(parts);
 }
 
 /**
- * Aborts a multipart upload.
+ * Aborts an ongoing multipart upload.
  */
 export async function abortMultipartUpload(
   bucket: R2Bucket,
   key: string,
   uploadId: string
 ): Promise<void> {
-  const upload = await bucket.resumeMultipartUpload(key, uploadId);
+  const upload = await bucket.getMultipartUpload(key, uploadId);
   await upload.abort();
 }
