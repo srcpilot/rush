@@ -4,16 +4,15 @@ import { verifyPassword, createToken } from '@/lib/auth';
 import { getUserByEmail } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
-  const { env } = getCloudflareContext();
   try {
-    const body = await request.json() as { email: string; password: string };
+    const body = await request.json();
     const { email, password } = body;
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    const user = await getUserByEmail(env.DB, email);
+    const user = await getUserByEmail(email);
     if (!user) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
@@ -23,13 +22,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const token = await createToken(user, env.AUTH_SECRET);
+    const token = await createToken(user);
 
     const { password_hash, ...userWithoutPassword } = user;
 
-    return NextResponse.json({ user: userWithoutPassword, token });
+    return NextResponse.json({
+      data: {
+        user: userWithoutPassword,
+        token,
+      },
+    });
   } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
