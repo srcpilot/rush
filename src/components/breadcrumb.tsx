@@ -1,29 +1,44 @@
-"use client";
+'use client';
 
-import Link from "next/link";
+import Link from 'next/link';
 
-interface BreadcrumbProps {
-  segments: Array<{ label: string; href: string }>;
+interface BreadcrumbSegment {
+  label: string;
+  href: string;
 }
 
-export default function Breadcrumb({ segments }: BreadcrumbProps) {
+interface BreadcrumbProps {
+  segments: BreadcrumbSegment[];
+}
+
+export function Breadcrumb({ segments }: BreadcrumbProps) {
   return (
-    <nav className="flex items-center space-x-2 text-sm">
-      {segments.map((segment, index) => (
-        <div key={segment.href} className="flex items-center space-x-2">
-          {index > 0 && <span className="text-[#a3a3a0]">/</span>}
-          <Link
-            href={segment.href}
-            className={
-              index === segments.length - 1
-                ? "text-[#fafaf5] font-medium cursor-default"
-                : "text-[#a3a3a0] hover:text-[#d4a853] transition-colors"
-            }
-          >
-            {segment.label}
-          </Link>
-        </div>
-      ))}
+    <nav aria-label="Breadcrumb" className="flex items-center text-sm">
+      <ol className="flex items-center space-x-2">
+        {segments.map((segment, index) => {
+          const isLast = index === segments.length - 1;
+
+          return (
+            <li key={segment.href} className="flex items-center">
+              {isLast ? (
+                <span className="text-[#fafaf5] font-medium" aria-current="page">
+                  {segment.label}
+                </span>
+              ) : (
+                <>
+                  <Link
+                    href={segment.href}
+                    className="text-[#a3a3a0] hover:text-[#fafaf5] transition-colors"
+                  >
+                    {segment.label}
+                  </Link>
+                  <span className="mx-2 text-[#a3a3a0]">/</span>
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ol>
     </nav>
   );
 }
