@@ -1,28 +1,34 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { getCloudflareContext } from 'cloudflare:workers';
+import { NextRequest, NextResponse } from 'next/server';
 import { getFile } from '@/lib/db.js';
 import { getAuthUser } from '@/lib/auth.js';
-import { streamFile } from '@/lib/r2.js';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   const { env } = getCloudflareContext();
   const user = await getAuthUser(request, env);
-
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { id } = params;
+
   try {
-    const file = await getFile(env.DB, params.id);
-    if (!file || file.owner_id !== user.id) {
+    const file = await getFile(env, id);
+    if (!file || file.userId !== user.id) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    const stream = await streamFile(env.R2_BUCKET, file.r2_key);
+    const obj = await env.STORAGE.get(file.r2Key);
+    if (!obj) {
+      return NextResponse.json({ error: 'File not found in storage' }, { status: 404 });
+    }
 
-    return new NextResponse(stream as unknown as BodyInit, {
+    return new Response(obj.body, {
       headers: {
-        'Content-Type': file.mime_type,
+        'Content-Type': file.mimeType,
         'Content-Disposition': `attachment; filename="${file.name}"`,
       },
     });
