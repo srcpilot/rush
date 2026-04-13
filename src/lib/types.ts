@@ -1,5 +1,4 @@
 export type FileStatus = 'active' | 'trashed' | 'deleted';
-
 export type ShareAccess = 'public' | 'password';
 
 export interface RushUser {
@@ -54,7 +53,6 @@ export interface UploadSession {
   file_name: string;
   file_key: string;
   upload_id: string;
-  mime_type: string;
   parts_completed: number;
   total_parts: number;
   total_bytes: number;

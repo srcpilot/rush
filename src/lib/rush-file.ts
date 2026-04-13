@@ -1,8 +1,12 @@
 export interface RushFile {
-  id: string;
+  id: number;
   name: string;
+  folder_id?: number;
+  owner_id: number;
+  r2_key: string;
   size: number;
-  url: string;
-  mimeType: string;
-  createdAt: string;
+  mime_type: string;
+  status: FileStatus;
+  created_at: string;
+  updated_at: string;
 }
