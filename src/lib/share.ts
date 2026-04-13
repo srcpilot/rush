@@ -1,5 +1,3 @@
-export type ShareAccess = 'public' | 'password';
-
 export interface Share {
   id: number;
   file_id: number;
