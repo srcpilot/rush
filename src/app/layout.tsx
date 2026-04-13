@@ -1,10 +1,9 @@
+import type { Metadata } from 'vinext';
+import { Inter } from "next/font/google";
 import "@/app/globals.css";
 import { Providers } from "@/components/providers";
 
-interface Metadata {
-  title: string;
-  description?: string;
-}
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Rush — Fast File Sharing",
@@ -18,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="bg-[#0a0a0a] text-[#fafaf5] antialiased">
+      <body className={`${inter.className} bg-[#0a0a0a] text-[#fafaf5] antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>
