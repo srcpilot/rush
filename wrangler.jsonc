@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/wrangler.jsonc",
   "name": "rush",
   "compatibility_date": "2025-01-01",
   "compatibility_flags": [
@@ -19,7 +20,7 @@
   "kv_namespaces": [
     {
       "binding": "SESSIONS",
-      "namespace_id": "rush-sessions"
+      "id": "rush-sessions"
     }
   ],
   "vars": {
