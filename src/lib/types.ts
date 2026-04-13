@@ -15,7 +15,7 @@ export interface RushUser {
 export interface Folder {
   id: number;
   name: string;
-  parent_id?: number;
+  parent_id: number | undefined;
   owner_id: number;
   path: string;
   depth: number;
@@ -26,7 +26,7 @@ export interface Folder {
 export interface RushFile {
   id: number;
   name: string;
-  folder_id?: number;
+  folder_id: number | undefined;
   owner_id: number;
   r2_key: string;
   size: number;
@@ -42,8 +42,8 @@ export interface Share {
   owner_id: number;
   token: string;
   access: ShareAccess;
-  password_hash?: string;
-  expires_at?: string;
+  password_hash: string | undefined;
+  expires_at: string | undefined;
   download_count: number;
   created_at: string;
 }
@@ -56,7 +56,7 @@ export interface UploadSession {
   parts_completed: number;
   total_parts: number;
   total_bytes: number;
-  folder_id?: number;
+  folder_id: number | undefined;
   owner_id: number;
   status: 'pending' | 'complete' | 'aborted';
   created_at: string;
