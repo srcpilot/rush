@@ -11,7 +11,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const fileId = params.id;
+  const fileId = parseInt(params.id, 10);
 
   try {
     const file = await getFile(env.DB, fileId);
@@ -38,7 +38,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const fileId = params.id;
+  const fileId = parseInt(params.id, 10);
 
   try {
     const file = await getFile(env.DB, fileId);

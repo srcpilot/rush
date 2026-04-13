@@ -54,6 +54,7 @@ export interface UploadSession {
   file_name: string;
   file_key: string;
   upload_id: string;
+  mime_type: string;
   parts_completed: number;
   total_parts: number;
   total_bytes: number;

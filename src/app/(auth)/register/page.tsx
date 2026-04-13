@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
@@ -16,7 +17,7 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
@@ -30,8 +31,9 @@ export default function RegisterPage() {
     try {
       await register(name, email, password);
       router.push('/');
-    } catch (err: any) {
-      setError(err.message || 'Failed to register. Please try again.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to register. Please try again.';
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -41,7 +43,7 @@ export default function RegisterPage() {
     <div className="w-full max-w-sm">
       <div className="bg-[#141414] border border-[#262626] rounded-xl p-8">
         <h1 className="text-2xl font-semibold text-[#f5f0e8] mb-6 text-center">Create Account</h1>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-[#a3a3a0] mb-1">
@@ -52,7 +54,7 @@ export default function RegisterPage() {
               type="text"
               required
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
               className="w-full bg-[#0a0a0a] border border-[#262626] rounded-lg px-4 py-2 text-[#f5f0e8] focus:outline-none focus:border-[#d4a853] transition-colors"
               placeholder="John Doe"
             />
@@ -67,7 +69,7 @@ export default function RegisterPage() {
               type="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               className="w-full bg-[#0a0a0a] border border-[#262626] rounded-lg px-4 py-2 text-[#f5f0e8] focus:outline-none focus:border-[#d4a853] transition-colors"
               placeholder="you@example.com"
             />
@@ -82,7 +84,7 @@ export default function RegisterPage() {
               type="password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               className="w-full bg-[#0a0a0a] border border-[#262626] rounded-lg px-4 py-2 text-[#f5f0e8] focus:outline-none focus:border-[#d4a853] transition-colors"
               placeholder="••••••••"
             />
@@ -97,7 +99,7 @@ export default function RegisterPage() {
               type="password"
               required
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
               className="w-full bg-[#0a0a0a] border border-[#262626] rounded-lg px-4 py-2 text-[#f5f0e8] focus:outline-none focus:border-[#d4a853] transition-colors"
               placeholder="••••••••"
             />

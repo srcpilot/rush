@@ -20,7 +20,7 @@ const getMimeTypeBadge = (mimeType: string) => {
 };
 
 export function FileCard({ file, onDelete, onShare }: FileCardProps) {
-  const mimeTypeBadge = getMimeTypeBadge(file.mimeType);
+  const mimeTypeBadge = getMimeTypeBadge(file.mime_type);
 
   return (
     <div className={cn(

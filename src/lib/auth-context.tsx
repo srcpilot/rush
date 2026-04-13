@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             headers: { Authorization: `Bearer ${savedToken}` },
           });
           if (response.ok) {
-            const userData: RushUser = await response.json();
+            const userData = await response.json() as RushUser;
             setUser(userData);
             setToken(savedToken);
           } else {
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!response.ok) throw new Error('Login failed');
 
-    const data = await response.json();
+    const data = await response.json() as { token: string; user: RushUser };
     const { token: newToken, user: newUser } = data;
 
     setToken(newToken);
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!response.ok) throw new Error('Registration failed');
 
-    const data = await response.json();
+    const data = await response.json() as { token: string; user: RushUser };
     const { token: newToken, user: newUser } = data;
 
     setToken(newToken);

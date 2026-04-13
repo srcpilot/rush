@@ -1,108 +1,73 @@
-        <Breadcrumb segments={breadcrumbs} />
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [files, setFiles] = useState<RushFile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [menuTarget, setMenuTarget] = useState<MenuTarget | null>(null);
-  const [breadcrumbs, setBreadcrumbs] = useState<{ label: string; href: string }[]>([]);
-  
-  const currentFolderId = searchParams.get("folder_id");
+'use client';
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const url = currentFolderId 
-        ? `/api/files?folder_id=${currentFolderId}` 
-        : "/api/files";
-      
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (!response.ok) throw new Error("Failed to fetch");
-      
-      const data = await response.json();
-      setFolders(data.folders || []);
-      setFiles(data.files || []);
-
-      // Build breadcrumbs
-      const newBreadcrumbs = [{ label: "My Files", href: "/(dashboard)" }];
-      if (currentFolderId) {
-        const currentFolder = data.folders?.find((f: Folder) => f.id === currentFolderId);
-        newBreadcrumbs.push({ 
-          label: currentFolder ? currentFolder.name : "Folder", 
-          href: `/(dashboard)?folder_id=${currentFolderId}` 
-        });
-      }
-      setBreadcrumbs(newBreadcrumbs);
-    } catch (error) {
-      console.error("Error loading files:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentFolderId, token]);
-"use client";
-
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { MouseEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context.js';
-import type { RushFile, Folder } from '@/lib/types.js';
-import Breadcrumb from '@/components/breadcrumb.tsx';
-import FolderCard from '@/components/folder-card.tsx';
-import FileCard from '@/components/file-card.tsx';
-import EmptyState from '@/components/empty-state.tsx';
-import ContextMenu from '@/components/context-menu.tsx';
+import { useAuth } from '@/lib/auth-context';
+import type { RushFile, Folder } from '@/lib/types';
+import Breadcrumb from '@/components/breadcrumb';
+import { FolderCard } from '@/components/folder-card';
+import { FileCard } from '@/components/file-card';
+import { EmptyState } from '@/components/empty-state';
 
-interface MenuTarget {
-  id: string;
-  type: 'file' | 'folder';
-  x: number;
-  y: number;
+interface ApiResponse {
+  data?: {
+    files?: RushFile[];
+    folders?: Folder[];
+  };
+  files?: RushFile[];
+  folders?: Folder[];
 }
 
 export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { token } = useAuth();
-  
-  const [breadcrumbs, setBreadcrumbs] = useState<{ label: string; href: string }[]>([]);
+
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [files, setFiles] = useState<RushFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [breadcrumbs, setBreadcrumbs] = useState<{ label: string; href: string }[]>([
+    { label: 'My Files', href: '/' },
+  ]);
+
+  const currentFolderId = searchParams.get('folder_id');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const url = currentFolderId 
-        ? `/api/files?folder_id=${currentFolderId}` 
-        : "/api/files";
-      
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (!response.ok) throw new Error("Failed to fetch");
-      
-      const data = await response.json();
-      setFolders(data.folders || []);
-      setFiles(data.files || []);
+      const url = currentFolderId
+        ? `/api/files?folder_id=${currentFolderId}`
+        : '/api/files';
 
-      // Build breadcrumbs
-      const newBreadcrumbs = [{ label: "My Files", href: "/(dashboard)" }];
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch');
+
+      const body = await response.json() as ApiResponse;
+      const fetchedFiles = body.files ?? body.data?.files ?? [];
+      const fetchedFolders = body.folders ?? body.data?.folders ?? [];
+
+      setFolders(fetchedFolders);
+      setFiles(fetchedFiles);
+
+      const newBreadcrumbs: { label: string; href: string }[] = [
+        { label: 'My Files', href: '/' },
+      ];
       if (currentFolderId) {
-        // In a real app, we'd fetch the folder name from the API or use the folder object
-        // For now, we'll just show the ID or a placeholder if we don't have the name
-        // But since we have folders, we can find the current one if it's in the list
-        const currentFolder = data.folders?.find((f: Folder) => f.id === currentFolderId);
-        newBreadcrumbs.push({ 
-          label: currentFolder ? currentFolder.name : "Folder", 
-          href: `/(dashboard)?folder_id=${currentFolderId}` 
+        const currentFolder = fetchedFolders.find(
+          (f) => String(f.id) === currentFolderId
+        );
+        newBreadcrumbs.push({
+          label: currentFolder ? currentFolder.name : 'Folder',
+          href: `/?folder_id=${currentFolderId}`,
         });
       }
       setBreadcrumbs(newBreadcrumbs);
-
     } catch (error) {
-      console.error("Error loading files:", error);
+      console.error('Error loading files:', error);
     } finally {
       setLoading(false);
     }
@@ -112,29 +77,13 @@ export default function DashboardPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleFolderClick = (folderId: string) => {
-    router.push(`/(dashboard)?folder_id=${folderId}`);
+  const handleFolderClick = (folderId: number) => {
+    router.push(`/?folder_id=${folderId}`);
   };
 
-  const handleContextMenu = (e: React.MouseEvent, id: string, type: 'file' | 'folder') => {
+  const handleContextMenu = (e: MouseEvent) => {
     e.preventDefault();
-    setMenuTarget({ 
-      id, 
-      type, 
-      x: e.clientX, 
-      y: e.clientY 
-    });
   };
-
-  const closeMenu = useCallback(() => {
-    setMenuTarget(null);
-  }, []);
-
-  useEffect(() => {
-    const handleClick = () => closeMenu();
-    window.addEventListener('click', handleClick);
-    return () => window.removeEventListener('click', handleClick);
-  }, [closeMenu]);
 
   if (loading) {
     return (
@@ -145,56 +94,44 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-8 space-y-8" onContextMenu={(e) => e.preventDefault()}>
+    <div className="p-8 space-y-8" onContextMenu={handleContextMenu}>
       <header className="space-y-4">
-        <Breadcrumb />
+        <Breadcrumb segments={breadcrumbs} />
       </header>
 
       <main className="space-y-8">
         {folders.length > 0 && (
           <section>
-            <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wider">Folders</h2>
+            <h2 className="text-sm font-medium text-[#a3a3a0] mb-4 uppercase tracking-wider">
+              Folders
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {folders.map((folder) => (
-                <div 
-                  key={folder.id} 
-                  onContextMenu={(e) => handleContextMenu(e, folder.id, 'folder')}
-                >
-                  <FolderCard 
-                    folder={folder} 
-                    onClick={() => handleFolderClick(folder.id)} 
-                  />
-                </div>
+                <FolderCard
+                  key={folder.id}
+                  folder={folder}
+                  onClick={handleFolderClick}
+                />
               ))}
             </div>
           </section>
         )}
 
         <section>
-          <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wider">Files</h2>
+          <h2 className="text-sm font-medium text-[#a3a3a0] mb-4 uppercase tracking-wider">
+            Files
+          </h2>
           {files.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {files.map((file) => (
-                <div 
-                  key={file.id} 
-                  onContextMenu={(e) => handleContextMenu(e, file.id, 'file')}
-                >
-                  <FileCard file={file} />
-                </div>
+                <FileCard key={file.id} file={file} />
               ))}
             </div>
           ) : (
-            <EmptyState />
+            <EmptyState title="No files yet" description="Upload your first file to get started." />
           )}
         </section>
       </main>
-
-      {menuTarget && (
-        <ContextMenu 
-          target={menuTarget} 
-          onClose={closeMenu}
-        />
-      )}
     </div>
   );
 }

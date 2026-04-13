@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   const folderId = searchParams.get('folder_id');
 
   try {
-    const files = await listFiles(env.DB, user.id, folderId);
+    const files = await listFiles(env.DB, user.id, folderId ? parseInt(folderId, 10) : undefined);
     return NextResponse.json({ data: files });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to list files' }, { status: 500 });

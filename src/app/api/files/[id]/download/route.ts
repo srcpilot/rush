@@ -12,7 +12,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const fileId = params.id;
+  const fileId = parseInt(params.id, 10);
 
   try {
     const file = await getFile(env.DB, fileId);
@@ -21,14 +21,17 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    // In a real app, we might also check for valid share links here
     if (file.owner_id !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const stream = await streamFile(env.R2_BUCKET, file.r2_key);
+    const result = await streamFile(env.STORAGE, file.r2_key);
 
-    return new NextResponse(stream, {
+    if (!result) {
+      return NextResponse.json({ error: 'File not found in storage' }, { status: 404 });
+    }
+
+    return new NextResponse(result.stream as BodyInit, {
       headers: {
         'Content-Type': file.mime_type,
         'Content-Disposition': `attachment; filename="${file.name}"`,

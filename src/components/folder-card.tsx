@@ -30,7 +30,7 @@ export function FolderCard({ folder, onClick }: FolderCardProps) {
           <div className="overflow-hidden">
             <p className="text-[#f5f0e8] font-medium truncate">{folder.name}</p>
             <p className="text-[#a3a3a0] text-xs">
-              {new Date(folder.createdAt).toLocaleDateString()}
+              {new Date(folder.created_at).toLocaleDateString()}
             </p>
           </div>
         </div>

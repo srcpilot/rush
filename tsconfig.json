@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "extends": "node_modules/vinext/tsconfig.json",
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"],
     "jsx": "react-jsx",
     "strict": true,
+    "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]

@@ -1,9 +1,7 @@
 import { getCloudflareContext } from 'cloudflare:workers';
 import { NextRequest, NextResponse } from 'next/server';
-import type { Folder } from '@/lib/types.js';
-import { listFolders, createFolder } from '@/lib/db.js';
+import { listFolders, createFolder, getFolder } from '@/lib/db.js';
 import { getAuthUser } from '@/lib/auth.js';
-import { buildFolderPath } from '@/lib/utils.js';
 
 export async function GET(request: NextRequest) {
   const { env } = getCloudflareContext();
@@ -13,10 +11,11 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const parentId = searchParams.get('parentId');
+  const parentIdParam = searchParams.get('parentId');
+  const parentId = parentIdParam ? parseInt(parentIdParam, 10) : undefined;
 
   try {
-    const folders = await listFolders(env, user.id, parentId);
+    const folders = await listFolders(env.DB, user.id, parentId);
     return NextResponse.json({ folders });
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -31,16 +30,33 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { name, parentId } = await request.json();
+    const body = await request.json() as { name: string; parentId?: string };
+    const { name, parentId } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    const folder = await createFolder(env, {
+    let path = `/${name}`;
+    let depth = 0;
+    let parent_id: number | undefined;
+
+    if (parentId) {
+      const numericParentId = parseInt(parentId, 10);
+      const parentFolder = await getFolder(env.DB, numericParentId);
+      if (parentFolder) {
+        path = `${parentFolder.path}/${name}`;
+        depth = parentFolder.depth + 1;
+        parent_id = numericParentId;
+      }
+    }
+
+    const folder = await createFolder(env.DB, {
       name,
-      parentId: parentId ? parseInt(parentId, 10) : undefined,
-      userId: user.id,
+      parent_id,
+      owner_id: user.id,
+      path,
+      depth,
     });
 
     return NextResponse.json({ folder }, { status: 201 });

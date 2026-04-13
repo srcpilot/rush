@@ -1,6 +1,5 @@
 import { getCloudflareContext } from 'cloudflare:workers';
 import { NextRequest, NextResponse } from 'next/server';
-import type { Folder } from '@/lib/types.js';
 import { getFolder, deleteFolder } from '@/lib/db.js';
 import { getAuthUser } from '@/lib/auth.js';
 
@@ -11,12 +10,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { id } = params;
+  const id = parseInt(params.id, 10);
 
   try {
-    const folder = await getFolder(env, id);
-    
-    if (!folder || folder.user_id !== user.id) {
+    const folder = await getFolder(env.DB, id);
+
+    if (!folder || folder.owner_id !== user.id) {
       return NextResponse.json({ error: 'Folder not found' }, { status: 403 });
     }
 
@@ -33,16 +32,16 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { id } = params;
+  const id = parseInt(params.id, 10);
 
   try {
-    const folder = await getFolder(env, id);
+    const folder = await getFolder(env.DB, id);
 
-    if (!folder || folder.user_id !== user.id) {
+    if (!folder || folder.owner_id !== user.id) {
       return NextResponse.json({ error: 'Folder not found' }, { status: 403 });
     }
 
-    await deleteFolder(env, id);
+    await deleteFolder(env.DB, id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

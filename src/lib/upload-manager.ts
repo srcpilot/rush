@@ -43,7 +43,7 @@ export class UploadManager {
       });
 
       if (!initRes.ok) throw new Error('Failed to initialize upload');
-      const { uploadId } = await initRes.json();
+      const { uploadId } = await initRes.json() as { uploadId: string };
 
       // 2. Upload chunks
       const totalChunks = Math.ceil(total / this.chunkSize);

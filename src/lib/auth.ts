@@ -117,7 +117,7 @@ export async function getAuthUser(request: Request, env: Env): Promise<RushUser 
   
   if (!payload) return null;
 
-  return await getUser(payload.userId);
+  return await getUser(env.DB, payload.userId);
 }
 
 // --- Internal Helpers ---
@@ -135,7 +135,7 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<Uint8Array
   const derivedBits = await crypto.subtle.deriveBits(
     {
       name: 'PBKDF2',
-      salt,
+      salt: salt as BufferSource,
       iterations: PBKDF2_ITERATIONS,
       hash: 'SHA-256'
     },

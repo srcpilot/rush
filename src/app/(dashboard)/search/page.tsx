@@ -1,4 +1,9 @@
-'use client'; import { useState, useEffect, useCallback } from 'react'; import { useSearchParams, useRouter } from 'next/navigation'; import { useAuth } from '@/lib/auth-context'; import { FileCard } from '@/components/file-card'; import { cn } from '@/lib/utils';
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
+import { FileCard } from '@/components/file-card';
 import type { RushFile } from '@/lib/types';
 import SearchInput from '@/components/search-input';
 
@@ -6,7 +11,7 @@ export default function SearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { token } = useAuth();
-  
+
   const query = searchParams.get('q') || '';
   const [searchQuery, setSearchQuery] = useState(query);
   const [results, setResults] = useState<RushFile[]>([]);
@@ -21,14 +26,12 @@ export default function SearchPage() {
     setIsLoading(true);
     try {
       const response = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (response.ok) {
-        const data = await response.json();
-        setResults(data);
+        const data = await response.json() as { results: RushFile[] };
+        setResults(data.results ?? []);
       } else {
         setResults([]);
       }
@@ -40,12 +43,10 @@ export default function SearchPage() {
     }
   }, [token]);
 
-  // Sync query from URL to state
   useEffect(() => {
     setSearchQuery(query);
   }, [query]);
 
-  // Handle search input change and sync to URL
   const handleSearchChange = (newQuery: string) => {
     setSearchQuery(newQuery);
     const params = new URLSearchParams(searchParams.toString());
@@ -57,7 +58,6 @@ export default function SearchPage() {
     router.replace(`?${params.toString()}`);
   };
 
-  // Trigger fetch when debounced search query changes
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchResults(searchQuery);
@@ -68,9 +68,9 @@ export default function SearchPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="max-w-3xl mx-auto">
-        <SearchInput 
-          value={searchQuery} 
-          onChange={handleSearchChange} 
+        <SearchInput
+          value={searchQuery}
+          onChange={handleSearchChange}
           placeholder="Search files..."
           className="w-full bg-[#141414] border border-[#262626] rounded-lg px-4 py-3 text-[#fafaf5] placeholder-[#a3a3a0] focus:border-[#d4a853] focus:outline-none"
         />
@@ -78,9 +78,7 @@ export default function SearchPage() {
 
       <div className="max-w-7xl mx-auto">
         {isLoading && (
-          <div className="text-center py-10 text-[#a3a3a0]">
-            Searching...
-          </div>
+          <div className="text-center py-10 text-[#a3a3a0]">Searching...</div>
         )}
 
         {!isLoading && searchQuery === '' && (
@@ -91,7 +89,7 @@ export default function SearchPage() {
 
         {!isLoading && searchQuery !== '' && results.length === 0 && (
           <div className="text-center py-20 text-[#a3a3a0]">
-            <p>No results for "{searchQuery}"</p>
+            <p>No results for &ldquo;{searchQuery}&rdquo;</p>
           </div>
         )}
 

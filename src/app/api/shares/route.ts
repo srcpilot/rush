@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCloudflareContext } from 'cloudflare:workers';
 import { getAuthUser } from '@/lib/auth';
-import { createFile } from '@/lib/db';
 import { generateToken } from '@/lib/utils';
 import { hashPassword } from '@/lib/auth';
 
@@ -13,14 +12,19 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { file_id, access, password, expires_at } = await request.json();
+    const body = await request.json() as {
+      file_id: number;
+      access: string;
+      password?: string;
+      expires_at?: string;
+    };
+    const { file_id, access, password, expires_at } = body;
 
     if (!file_id || !access) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Verify file ownership
-    const file = await env.DB.prepare('SELECT * FROM files WHERE id = ? AND user_id = ?')
+    const file = await env.DB.prepare('SELECT * FROM files WHERE id = ? AND owner_id = ?')
       .bind(file_id, user.id)
       .first();
 
@@ -36,19 +40,20 @@ export async function POST(request: NextRequest) {
       password_hash = await hashPassword(password);
     }
 
-    let token: string;
+    let shareToken: string = generateToken(32);
     let retries = 3;
     while (retries > 0) {
-      token = generateToken(32);
+      shareToken = generateToken(32);
       try {
         await env.DB.prepare(
-          'INSERT INTO shares (token, file_id, user_id, access, password_hash, expires_at) VALUES (?, ?, ?, ?, ?, ?)'
+          'INSERT INTO shares (token, file_id, owner_id, access, password_hash, expires_at) VALUES (?, ?, ?, ?, ?, ?)'
         )
-          .bind(token, file_id, user.id, access, password_hash, expires_at || null)
+          .bind(shareToken, file_id, user.id, access, password_hash, expires_at || null)
           .run();
         break;
-      } catch (e: any) {
-        if (e.message.includes('UNIQUE constraint failed') && retries > 1) {
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : '';
+        if (msg.includes('UNIQUE constraint failed') && retries > 1) {
           retries--;
         } else {
           throw e;
@@ -57,11 +62,12 @@ export async function POST(request: NextRequest) {
     }
 
     const share = await env.DB.prepare('SELECT * FROM shares WHERE token = ?')
-      .bind(token)
+      .bind(shareToken)
       .first();
 
     return NextResponse.json({ data: share });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
