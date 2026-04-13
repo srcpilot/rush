@@ -3,18 +3,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { getFile, deleteFile } from '@/lib/db';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+type RouteParams = { params: { id: string } };
+
+export async function GET(request: NextRequest, { params }: RouteParams) {
   const { env } = getCloudflareContext();
   const user = await getAuthUser(request, env);
+  const { id } = params;
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const fileId = parseInt(params.id, 10);
-
   try {
-    const file = await getFile(env.DB, fileId);
+    const file = await getFile(env.DB, id);
 
     if (!file) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
@@ -26,22 +27,21 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json({ data: file });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to retrieve file' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const { env } = getCloudflareContext();
   const user = await getAuthUser(request, env);
+  const { id } = params;
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const fileId = parseInt(params.id, 10);
-
   try {
-    const file = await getFile(env.DB, fileId);
+    const file = await getFile(env.DB, id);
 
     if (!file) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
@@ -51,10 +51,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await deleteFile(env.DB, fileId);
+    await deleteFile(env.DB, id, { status: 'trashed' });
 
     return NextResponse.json({ data: { success: true } });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete file' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
