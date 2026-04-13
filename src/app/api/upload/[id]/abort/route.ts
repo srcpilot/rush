@@ -2,10 +2,9 @@ import { getCloudflareContext } from 'cloudflare:workers';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth.js';
 import { getUploadSession, updateUploadSession } from '@/lib/db.js';
-import { completeMultipartUpload } from '@/lib/r2.js';
-import { createRushFile } from '@/lib/db.js'; // Assuming this exists based on task description
+import { abortMultipartUpload } from '@/lib/r2.js';
 
-export async function POST(request: NextRequest) {
+export async function DELETE(request: NextRequest) {
   const { env } = getCloudflareContext();
   const user = await getAuthUser(request, env);
   if (!user) {
@@ -18,30 +17,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { parts } = await request.json();
     const session = await getUploadSession(env, sessionId);
 
     if (!session || session.userId !== user.id) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    await completeMultipartUpload(env, session.r2Key, session.uploadId, parts);
-
-    await updateUploadSession(env, sessionId, { status: 'complete' });
-
-    await createRushFile(env, {
-      name: session.filename,
-      size: session.size,
-      mimeType: session.mimeType,
-      r2Key: session.r2Key,
-      userId: user.id,
-      folderId: session.folderId,
-      status: 'active'
-    });
+    await abortMultipartUpload(env, session.r2Key, session.uploadId);
+    await updateUploadSession(env, sessionId, { status: 'aborted' });
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error: any) {
-    console.error('Upload complete error:', error);
+    console.error('Upload abort error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
