@@ -1,53 +1,59 @@
-import type { RushUser } from './types.js';
-import { getUserByEmail, getUser } from './db.js';
+import type { RushUser } from './types';
+import { getUserByEmail, getUser } from './db';
 
 /**
- * WebCrypto-based authentication utilities.
- * Uses PBKDF2 for password hashing and HMAC-SHA256 for token signing.
- */
-
-const PBKDF2_ITERATIONS = 100000;
-const SALT_BYTE_LENGTH = 16;
-const HASH_ALGO = 'SHA-256';
-
-/**
- * Hashes a password using PBKDF2 with a random salt.
- * Returns a string in the format: salt:hash (both base64url encoded).
+ * WebCrypto PBKDF2 implementation for password hashing.
+ * Format: salt:hash (both base64url encoded)
  */
 export async function hashPassword(password: string): Promise<string> {
-  const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTE_LENGTH));
-  const hash = await deriveKey(password, salt);
-  
-  const saltBase64 = base64UrlEncode(salt);
-  const hashBase64 = base64UrlEncode(new Uint8Array(hash));
-  
-  return `${saltBase64}:${hashBase64}`;
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await deriveKey(password, salt);
+  const hash = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: salt,
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    key,
+    256
+  );
+
+  return `${base64UrlEncode(salt)}:${base64UrlEncode(new Uint8Array(hash))}`;
 }
 
-/**
- * Verifies a password against a stored hash.
- */
 export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
-  const [saltBase64, originalHashBase64] = storedHash.split(':');
-  if (!saltBase64 || !originalHashBase64) return false;
+  const [saltStr, hashStr] = storedHash.split(':');
+  if (!saltStr || !hashStr) return false;
 
-  const salt = base64UrlDecode(saltBase64);
-  const originalHash = base64UrlDecode(originalHashBase64);
+  const salt = base64UrlDecode(saltStr);
+  const originalHash = base64UrlDecode(hashStr);
+
+  const key = await deriveKey(password, salt);
+  const newHashBits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: salt,
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    key,
+    256
+  );
+
+  const newHash = new Uint8Array(newHashBits);
   
-  const derivedHash = await deriveKey(password, salt);
-  
-  // Constant-time comparison
-  if (derivedHash.length !== originalHash.length) return false;
+  // Constant time comparison
+  if (newHash.length !== originalHash.length) return false;
   let result = 0;
-  for (let i = 0; i < derivedHash.length; i++) {
-    result |= derivedHash[i] ^ originalHash[i];
+  for (let i = 0; i < newHash.length; i++) {
+    result |= newHash[i] ^ originalHash[i];
   }
   return result === 0;
 }
 
 /**
- * Creates a compact JWT-like token.
- * Format: base64url(header).base64url(payload).base64url(signature)
+ * Creates a compact JWT-like token: base64url(header).base64url(payload).base64url(signature)
  */
 export async function createToken(
   user: { id: number; email: string },
@@ -55,56 +61,50 @@ export async function createToken(
   expiresInHours: number = 24
 ): Promise<string> {
   const header = { alg: 'HS256', typ: 'JWT' };
-  const now = Math.floor(Date.now() / 1000);
   const payload = {
     userId: user.id,
     email: user.email,
-    exp: now + expiresInHours * 60 * 60,
+    exp: Math.floor(Date.now() / 1000) + expiresInHours * 3600,
   };
 
   const encodedHeader = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
   const encodedPayload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
-  
   const unsignedToken = `${encodedHeader}.${encodedPayload}`;
+
   const signature = await signHmac(unsignedToken, secret);
   const encodedSignature = base64UrlEncode(signature);
 
   return `${unsignedToken}.${encodedSignature}`;
 }
 
-/**
- * Verifies a token and returns the payload if valid.
- */
-export async function verifyToken(token: string, secret: string): Promise<{ userId: number; email: string } | null> {
+export async function verifyToken(
+  token: string,
+  secret: string
+): Promise<{ userId: number; email: string } | null> {
   const parts = token.split('.');
   if (parts.length !== 3) return null;
 
   const [encodedHeader, encodedPayload, encodedSignature] = parts;
   const unsignedToken = `${encodedHeader}.${encodedPayload}`;
-  
+
+  // Verify signature
   const signature = base64UrlDecode(encodedSignature);
   const expectedSignature = await signHmac(unsignedToken, secret);
 
-  // Verify signature
-  let match = true;
-  if (signature.length !== expectedSignature.length) {
-    match = false;
-  } else {
-    for (let i = 0; i < signature.length; i++) {
-      if (signature[i] !== expectedSignature[i]) {
-        match = false;
-        break;
-      }
-    }
+  // Constant time comparison for signature
+  if (signature.length !== expectedSignature.length) return null;
+  let result = 0;
+  for (let i = 0; i < signature.length; i++) {
+    result |= signature[i] ^ expectedSignature[i];
   }
+  if (result !== 0) return null;
 
-  if (!match) return null;
-
+  // Parse payload
   try {
     const payloadJson = new TextDecoder().decode(base64UrlDecode(encodedPayload));
     const payload = JSON.parse(payloadJson);
 
-    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) {
+    if (typeof payload.exp !== 'number' || payload.exp < Math.floor(Date.now() / 1000)) {
       return null;
     }
 
@@ -118,7 +118,7 @@ export async function verifyToken(token: string, secret: string): Promise<{ user
 }
 
 /**
- * Extracts user from Request via Bearer token.
+ * Extracts Bearer token from request and fetches user
  */
 export async function getAuthUser(request: Request, env: Env): Promise<RushUser | null> {
   const authHeader = request.headers.get('Authorization');
@@ -127,64 +127,55 @@ export async function getAuthUser(request: Request, env: Env): Promise<RushUser 
   }
 
   const token = authHeader.substring(7);
-  const payload = await verifyToken(token, env.JWT_SECRET);
-
+  const payload = await verifyToken(token, env.AUTH_SECRET);
   if (!payload) return null;
 
-  return await getUser(env.DB, payload.userId);
+  return await getUser(payload.userId);
 }
 
 // --- Internal Helpers ---
 
-async function deriveKey(password: string, salt: Uint8Array): Promise<Uint8Array> {
+async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     encoder.encode(password),
     'PBKDF2',
     false,
-    ['deriveBits']
+    ['deriveBits', 'deriveKey']
   );
 
-  const derivedBits = await crypto.subtle.deriveBits(
+  return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
       salt: salt,
-      iterations: PBKDF2_ITERATIONS,
-      hash: HASH_ALGO,
+      iterations: 100000,
+      hash: 'SHA-256',
     },
     keyMaterial,
-    256
+    { name: 'HMAC', hash: 'SHA-256', length: 256 },
+    false,
+    ['sign', 'verify']
   );
-
-  return new Uint8Array(derivedBits);
 }
 
 async function signHmac(data: string, secret: string): Promise<Uint8Array> {
   const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
+  const key = await crypto.subtle.importKey(
     'raw',
     encoder.encode(secret),
-    { name: 'HMAC', hash: HASH_ALGO },
+    { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
   );
 
-  const signature = await crypto.subtle.sign(
-    'HMAC',
-    keyMaterial,
-    encoder.encode(data)
-  );
-
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
   return new Uint8Array(signature);
 }
 
-function base64UrlEncode(bytes: Uint8Array): string {
-  const base64 = btoa(String.fromCharCode(...bytes));
-  return base64
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+function base64UrlEncode(buffer: Uint8Array): string {
+  const base64 = btoa(String.fromCharCode(...buffer));
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 function base64UrlDecode(base64url: string): Uint8Array {
@@ -192,10 +183,10 @@ function base64UrlDecode(base64url: string): Uint8Array {
   while (base64.length % 4) {
     base64 += '=';
   }
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
 }
