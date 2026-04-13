@@ -6,22 +6,30 @@ export type UploadProgress = {
   status: 'uploading' | 'complete' | 'error';
 };
 
+export interface RushFile {
+  id: string;
+  name: string;
+  size: number;
+  mimeType: string;
+  url?: string;
+  createdAt: Date;
+}
+
 export class UploadManager {
   private token: string;
   private baseUrl: string;
-  private chunkSize: number;
+  private chunkSize: number = 5 * 1024 * 1024; // 5MB
 
-  constructor(token: string, baseUrl: string, chunkSize: number = 5 * 1024 * 1024) {
+  constructor(token: string, baseUrl: string) {
     this.token = token;
     this.baseUrl = baseUrl;
-    this.chunkSize = chunkSize;
   }
 
   async upload(
     file: File,
     folderId?: number,
     onProgress?: (p: UploadProgress) => void
-  ): Promise<import('./rush-file').RushFile> {
+  ): Promise<RushFile> {
     const fileName = file.name;
     let loaded = 0;
     const total = file.size;
@@ -43,36 +51,34 @@ export class UploadManager {
       });
 
       if (!initRes.ok) throw new Error('Failed to initialize upload');
-      const { uploadId } = await initRes.json() as { uploadId: string };
+      const { uploadId } = await initRes.json();
 
       // 2. Upload chunks
-      const totalChunks = Math.ceil(total / this.chunkSize);
+      const numChunks = Math.ceil(total / this.chunkSize);
       const parts: { partNumber: number; etag: string }[] = [];
 
-      for (let i = 0; i < totalChunks; i++) {
+      for (let i = 0; i < numChunks; i++) {
         const start = i * this.chunkSize;
         const end = Math.min(start + this.chunkSize, total);
         const chunk = file.slice(start, end);
-        const partNumber = i + 1;
+        const buffer = await chunk.arrayBuffer();
 
-        const formData = new FormData();
-        formData.append('chunk', chunk);
-
-        const partRes = await fetch(`${this.baseUrl}/api/upload/${uploadId}/part?part_number=${partNumber}`, {
+        const partRes = await fetch(`${this.baseUrl}/api/upload/${uploadId}/part?part_number=${i + 1}`, {
           method: 'PUT',
           headers: {
-            'Authorization': `Bearer ${this.token}`
+            'Authorization': `Bearer ${this.token}`,
+            'Content-Type': 'application/octet-stream'
           },
-          body: chunk // Using raw body for binary upload as per spec
+          body: buffer
         });
 
-        if (!partRes.ok) throw new Error(`Failed to upload part ${partNumber}`);
-        
+        if (!partRes.ok) throw new Error(`Failed to upload part ${i + 1}`);
         const etag = partRes.headers.get('ETag');
         if (!etag) throw new Error('No ETag returned from part upload');
-        parts.push({ partNumber, etag: etag.replace(/"/g, '') });
+        
+        parts.push({ partNumber: i + 1, etag });
 
-        loaded = end;
+        loaded += chunk.size;
         if (onProgress) {
           onProgress({
             fileName,
@@ -107,7 +113,7 @@ export class UploadManager {
         });
       }
 
-      return fileData as import('./rush-file').RushFile;
+      return fileData as RushFile;
     } catch (error) {
       if (onProgress) {
         onProgress({
