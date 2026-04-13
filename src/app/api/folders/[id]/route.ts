@@ -9,15 +9,25 @@ export async function GET(
 ) {
   const { env } = getCloudflareContext();
   const user = await getAuthUser(request, env);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const id = parseInt(params.id);
-  if (isNaN(id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+  if (isNaN(id)) {
+    return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+  }
 
   try {
     const folder = await getFolder(env.DB, id);
-    if (!folder) return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
-    if (folder.owner_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    if (!folder) {
+      return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
+    }
+
+    if (folder.owner_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     return NextResponse.json({ data: folder });
   } catch (error) {
@@ -31,17 +41,28 @@ export async function DELETE(
 ) {
   const { env } = getCloudflareContext();
   const user = await getAuthUser(request, env);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const id = parseInt(params.id);
-  if (isNaN(id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+  if (isNaN(id)) {
+    return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+  }
 
   try {
     const folder = await getFolder(env.DB, id);
-    if (!folder) return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
-    if (folder.owner_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    if (!folder) {
+      return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
+    }
+
+    if (folder.owner_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     await deleteFolder(env.DB, id);
+
     return NextResponse.json({ data: { success: true } });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to delete folder' }, { status: 500 });
