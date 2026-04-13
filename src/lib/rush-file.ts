@@ -4,5 +4,5 @@ export interface RushFile {
   size: number;
   mimeType: string;
   url?: string;
-  createdAt: Date;
+  createdAt: string;
 }

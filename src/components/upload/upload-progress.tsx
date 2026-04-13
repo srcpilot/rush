@@ -20,7 +20,7 @@ export function UploadProgressList({ progresses }: UploadProgressProps) {
             <span className="text-[#fafaf5] text-sm font-medium truncate max-w-[180px]">
               {p.fileName}
             </span>
-            <span className={`text-[10px] uppercase tracking-wider font-bold ${
+            <span className={`text-[10px] uppercase font-bold ${
               p.status === 'complete' ? 'text-[#d4a853]' : 
               p.status === 'error' ? 'text-red-500' : 'text-[#a3a3a0]'
             }`}>
@@ -35,9 +35,12 @@ export function UploadProgressList({ progresses }: UploadProgressProps) {
             />
           </div>
           
-          <div className="flex justify-end mt-1">
+          <div className="flex justify-between mt-1.5">
             <span className="text-[#a3a3a0] text-[10px]">
               {p.percent}%
+            </span>
+            <span className="text-[#a3a3a0] text-[10px]">
+              {Math.round(p.loaded / 1024 / 1024)}MB / {Math.round(p.total / 1024 / 1024)}MB
             </span>
           </div>
         </div>

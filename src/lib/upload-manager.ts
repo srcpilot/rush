@@ -12,13 +12,13 @@ export interface RushFile {
   size: number;
   mimeType: string;
   url?: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 export class UploadManager {
   private token: string;
   private baseUrl: string;
-  private chunkSize: number = 5 * 1024 * 1024; // 5MB
+  private chunkSize: number = 5 * 1024 * 1024; // 5MB default
 
   constructor(token: string, baseUrl: string) {
     this.token = token;
@@ -51,7 +51,7 @@ export class UploadManager {
       });
 
       if (!initRes.ok) throw new Error('Failed to initialize upload');
-      const { uploadId } = await initRes.json() as { uploadId: string };
+      const { uploadId } = await initRes.json();
 
       // 2. Upload chunks
       const numChunks = Math.ceil(total / this.chunkSize);
@@ -73,21 +73,20 @@ export class UploadManager {
         });
 
         if (!partRes.ok) throw new Error(`Failed to upload part ${i + 1}`);
+        
         const etag = partRes.headers.get('ETag');
         if (!etag) throw new Error('No ETag returned from part upload');
         
-        parts.push({ partNumber: i + 1, etag });
+        parts.push({ partNumber: i + 1, etag: etag.replace(/"/g, '') });
 
-        loaded += chunk.size;
-        if (onProgress) {
-          onProgress({
-            fileName,
-            loaded,
-            total,
-            percent: Math.round((loaded / total) * 100),
-            status: 'uploading'
-          });
-        }
+        loaded = end;
+        onProgress?.({
+          fileName,
+          loaded,
+          total,
+          percent: Math.round((loaded / total) * 100),
+          status: 'uploading'
+        });
       }
 
       // 3. Complete upload
@@ -101,29 +100,25 @@ export class UploadManager {
       });
 
       if (!completeRes.ok) throw new Error('Failed to complete upload');
-      const fileData = await completeRes.json();
+      const rushFile: RushFile = await completeRes.json();
 
-      if (onProgress) {
-        onProgress({
-          fileName,
-          loaded: total,
-          total,
-          percent: 100,
-          status: 'complete'
-        });
-      }
+      onProgress?.({
+        fileName,
+        loaded: total,
+        total,
+        percent: 100,
+        status: 'complete'
+      });
 
-      return fileData as RushFile;
+      return rushFile;
     } catch (error) {
-      if (onProgress) {
-        onProgress({
-          fileName,
-          loaded,
-          total,
-          percent: Math.round((loaded / total) * 100),
-          status: 'error'
-        });
-      }
+      onProgress?.({
+        fileName,
+        loaded,
+        total,
+        percent: Math.round((loaded / total) * 100),
+        status: 'error'
+      });
       throw error;
     }
   }
