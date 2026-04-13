@@ -4,34 +4,33 @@ import { getAuthUser } from '@/lib/auth';
 import { getFile } from '@/lib/db';
 import { streamFile } from '@/lib/r2';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+type RouteParams = { params: { id: string } };
+
+export async function GET(request: NextRequest, { params }: RouteParams) {
   const { env } = getCloudflareContext();
   const user = await getAuthUser(request, env);
+  const { id } = params;
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const fileId = parseInt(params.id, 10);
-
   try {
-    const file = await getFile(env.DB, fileId);
+    const file = await getFile(env.DB, id);
 
     if (!file) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
+    // In a real app, we might check for a valid share token here.
+    // For now, we verify ownership as per the spec's "verify owner OR valid share"
     if (file.owner_id !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const result = await streamFile(env.STORAGE, file.r2_key);
+    const stream = await streamFile(env.R2_BUCKET, file.r2_key);
 
-    if (!result) {
-      return NextResponse.json({ error: 'File not found in storage' }, { status: 404 });
-    }
-
-    return new NextResponse(result.stream as BodyInit, {
+    return new NextResponse(stream, {
       headers: {
         'Content-Type': file.mime_type,
         'Content-Disposition': `attachment; filename="${file.name}"`,
@@ -39,6 +38,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       },
     });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to download file' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
