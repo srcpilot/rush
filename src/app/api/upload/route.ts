@@ -12,41 +12,29 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json() as {
-      file_name: string;
-      file_size: number;
-      mime_type: string;
-      total_parts: number;
-      folder_id?: number;
-    };
-    const { file_name, file_size, mime_type, total_parts, folder_id } = body;
+    const { file_name, file_size, mime_type, total_parts, folder_id } = await request.json();
 
-    if (!file_name || !file_size || !total_parts) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
+    const file_key = generateFileKey(file_name, folder_id);
+    const { upload_id } = await createMultipartUpload(env.STORAGE, file_key, mime_type);
 
-    const file_key = generateFileKey(user.id, file_name);
-    const { uploadId } = await createMultipartUpload(env.STORAGE, file_key, mime_type);
-
-    const session = await createUploadSession(env.DB, {
-      file_key,
+    const session = await createUploadSession(env, {
+      user_id: user.id,
       file_name,
+      file_size,
       mime_type,
-      total_bytes: file_size,
+      file_key,
+      upload_id,
       total_parts,
       folder_id,
-      upload_id: uploadId,
-      owner_id: user.id,
+      status: 'pending'
     });
 
     return NextResponse.json({
       session_id: session.id,
-      upload_id: uploadId,
-      file_key,
+      upload_id,
+      file_key
     });
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Upload initiation error:', error);
-    return NextResponse.json({ error: msg }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
