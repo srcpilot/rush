@@ -9,10 +9,14 @@ type RouteParams = { params: { id: string } };
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const { env } = getCloudflareContext();
   const user = await getAuthUser(request, env);
-  const { id } = params;
+  const id = parseInt(params.id, 10);
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (isNaN(id)) {
+    return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
   }
 
   try {
@@ -22,19 +26,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    // In a real app, we might check for a valid share token here.
-    // For now, we verify ownership as per the spec's "verify owner OR valid share"
     if (file.owner_id !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const stream = await streamFile(env.R2_BUCKET, file.r2_key);
+    const result = await streamFile(env.STORAGE, file.r2_key);
 
-    return new NextResponse(stream, {
+    if (!result) {
+      return NextResponse.json({ error: 'File data not found' }, { status: 404 });
+    }
+
+    return new NextResponse(result.stream, {
       headers: {
-        'Content-Type': file.mime_type,
+        'Content-Type': result.contentType,
         'Content-Disposition': `attachment; filename="${file.name}"`,
-        'Content-Length': file.size.toString(),
+        'Content-Length': result.size.toString(),
       },
     });
   } catch (error) {

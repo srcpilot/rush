@@ -127,11 +127,11 @@ export async function getAuthUser(request: Request, env: Env): Promise<RushUser 
   }
 
   const token = authHeader.substring(7);
-  const payload = await verifyToken(token, env.AUTH_SECRET);
-  
+  const payload = await verifyToken(token, env.JWT_SECRET);
+
   if (!payload) return null;
 
-  return await getUser(payload.userId);
+  return await getUser(env.DB, payload.userId);
 }
 
 // --- Internal Helpers ---

@@ -8,10 +8,14 @@ type RouteParams = { params: { id: string } };
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const { env } = getCloudflareContext();
   const user = await getAuthUser(request, env);
-  const { id } = params;
+  const id = parseInt(params.id, 10);
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (isNaN(id)) {
+    return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
   }
 
   try {
@@ -34,10 +38,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const { env } = getCloudflareContext();
   const user = await getAuthUser(request, env);
-  const { id } = params;
+  const id = parseInt(params.id, 10);
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (isNaN(id)) {
+    return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
   }
 
   try {
@@ -51,7 +59,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await deleteFile(env.DB, id, { status: 'trashed' });
+    await deleteFile(env.DB, id);
 
     return NextResponse.json({ data: { success: true } });
   } catch (error) {

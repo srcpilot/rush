@@ -7,34 +7,20 @@ import { FileCard } from '@/components/file-card';
 import { FolderCard } from '@/components/folder-card';
 import { EmptyState } from '@/components/empty-state';
 import { Breadcrumb } from '@/components/breadcrumb';
-
-interface RushFile {
-  id: number;
-  name: string;
-  size: number;
-  type: string;
-  updated_at: string;
-}
-
-interface Folder {
-  id: number;
-  name: string;
-  parent_id: number | null;
-  updated_at: string;
-}
+import type { RushFile, Folder } from '@/lib/types';
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [files, setFiles] = useState<RushFile[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentFolderId, setCurrentFolderId] = useState<number | null>(null);
 
   const currentFolderIdParam = searchParams.get('folder');
-  
+
   useEffect(() => {
     if (currentFolderIdParam) {
       setCurrentFolderId(Number(currentFolderIdParam));
@@ -59,13 +45,13 @@ export default function DashboardPage() {
         ]);
 
         if (foldersRes.ok) {
-          const foldersData = await foldersRes.json();
-          setFolders(foldersData);
+          const foldersData = await foldersRes.json() as { data: Folder[] };
+          setFolders(foldersData.data);
         }
 
         if (filesRes.ok) {
-          const filesData = await filesRes.json();
-          setFiles(filesData);
+          const filesData = await filesRes.json() as { data: RushFile[] };
+          setFiles(filesData.data);
         }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
@@ -77,7 +63,6 @@ export default function DashboardPage() {
     fetchData();
   }, [user, authLoading, currentFolderId, router]);
 
-  // Simple breadcrumb logic for now - in a real app this would fetch the path
   const breadcrumbSegments = [
     { label: 'Home', href: '/dashboard' },
     ...(currentFolderId ? [{ label: 'Folder', href: `?folder=${currentFolderId}` }] : [])
@@ -95,7 +80,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <Breadcrumb segments={breadcrumbSegments} />
-        <button 
+        <button
           className="px-4 py-2 bg-[#d4a853] text-[#0a0a0a] rounded-md font-medium hover:opacity-90 transition-opacity"
           onClick={() => {/* Trigger UploadZone modal (Phase 2) */}}
         >
@@ -114,9 +99,9 @@ export default function DashboardPage() {
               <h2 className="text-[#fafaf5] text-lg font-medium mb-4">Folders</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {folders.map((folder) => (
-                  <FolderCard 
-                    key={folder.id} 
-                    folder={folder} 
+                  <FolderCard
+                    key={folder.id}
+                    folder={folder}
                     onClick={() => router.push(`/dashboard?folder=${folder.id}`)}
                   />
                 ))}
@@ -136,7 +121,7 @@ export default function DashboardPage() {
           )}
 
           {(folders.length === 0 && files.length === 0) && (
-            <EmptyState />
+            <EmptyState title="No files yet" description="Upload a file to get started." />
           )}
         </>
       )}

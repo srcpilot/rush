@@ -4,15 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { FileCard } from '@/components/file-card';
-
-interface RushFile {
-  id: string;
-  name: string;
-  path: string;
-  size: number;
-  updatedAt: string;
-  type: string;
-}
+import type { RushFile } from '@/lib/types';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -20,12 +12,12 @@ export default function SearchPage() {
   const { token } = useAuth();
 
   const queryParam = searchParams.get('q') || '';
-  
+
   const [query, setQuery] = useState(queryParam);
   const [results, setResults] = useState<RushFile[]>([]);
   const [loading, setLoading] = useState(false);
-  
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchResults = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) {
@@ -42,8 +34,8 @@ export default function SearchPage() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setResults(data);
+        const data = await response.json() as { results: RushFile[] };
+        setResults(data.results);
       } else {
         setResults([]);
       }
@@ -78,7 +70,7 @@ export default function SearchPage() {
       } else {
         params.delete('q');
       }
-      router.replace(`?${params.toString()}`, { scroll: false });
+      router.replace(`?${params.toString()}`);
 
       // Fetch results
       fetchResults(newValue);
@@ -89,7 +81,7 @@ export default function SearchPage() {
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-2xl font-semibold text-[#fafaf5] mb-6">Search</h1>
-        
+
         <div className="relative">
           <input
             type="text"

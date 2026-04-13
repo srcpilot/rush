@@ -2,19 +2,32 @@ import { getCloudflareContext } from 'cloudflare:workers';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPassword } from '@/lib/auth';
 
+interface ShareRow {
+  id: number;
+  file_id: number;
+  token: string;
+  access: string;
+  password_hash: string | null;
+  expires_at: string | null;
+  download_count: number;
+  name: string;
+  mime_type: string;
+  size: number;
+}
+
 export async function GET(request: NextRequest, { params }: { params: { token: string } }) {
   const { env } = getCloudflareContext();
   const { token } = params;
 
   try {
     const share = await env.DB.prepare(`
-      SELECT s.*, f.name, f.mime_type, f.size 
-      FROM shares s 
-      JOIN files f ON s.file_id = f.id 
+      SELECT s.*, f.name, f.mime_type, f.size
+      FROM shares s
+      JOIN files f ON s.file_id = f.id
       WHERE s.token = ?
     `)
       .bind(token)
-      .first();
+      .first<ShareRow>();
 
     if (!share) {
       return NextResponse.json({ error: 'Share not found' }, { status: 404 });
@@ -40,7 +53,7 @@ export async function POST(request: NextRequest, { params }: { params: { token: 
   const { token } = params;
 
   try {
-    const body = await request.json();
+    const body = await request.json() as Record<string, string>;
     const { password } = body;
 
     if (!password) {
@@ -48,13 +61,13 @@ export async function POST(request: NextRequest, { params }: { params: { token: 
     }
 
     const share = await env.DB.prepare(`
-      SELECT s.*, f.name, f.mime_type, f.size 
-      FROM shares s 
-      JOIN files f ON s.file_id = f.id 
+      SELECT s.*, f.name, f.mime_type, f.size
+      FROM shares s
+      JOIN files f ON s.file_id = f.id
       WHERE s.token = ?
     `)
       .bind(token)
-      .first();
+      .first<ShareRow>();
 
     if (!share) {
       return NextResponse.json({ error: 'Share not found' }, { status: 404 });
@@ -64,7 +77,7 @@ export async function POST(request: NextRequest, { params }: { params: { token: 
       return NextResponse.json({ error: 'This share is not password protected' }, { status: 400 });
     }
 
-    const isValid = await verifyPassword(password, share.password_hash);
+    const isValid = await verifyPassword(password, share.password_hash ?? '');
     if (!isValid) {
       return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
     }

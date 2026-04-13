@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
 
           if (response.ok) {
-            const userData = await response.json();
+            const userData = await response.json() as RushUser;
             setUser(userData);
             setToken(savedToken);
           } else {
@@ -59,10 +59,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Login failed');
     }
 
-    const data = await response.json();
-    const { user, token: newToken } = data;
+    const data = await response.json() as { user: RushUser; token: string };
+    const { user: newUser, token: newToken } = data;
 
-    setUser(user);
+    setUser(newUser);
     setToken(newToken);
     localStorage.setItem('rush_token', newToken);
   };
@@ -78,10 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Registration failed');
     }
 
-    const data = await response.json();
-    const { user, token: newToken } = data;
+    const data = await response.json() as { user: RushUser; token: string };
+    const { user: newUser, token: newToken } = data;
 
-    setUser(user);
+    setUser(newUser);
     setToken(newToken);
     localStorage.setItem('rush_token', newToken);
   };

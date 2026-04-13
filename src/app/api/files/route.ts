@@ -12,7 +12,8 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const folderId = searchParams.get('folder_id');
+  const folderIdParam = searchParams.get('folder_id');
+  const folderId = folderIdParam ? parseInt(folderIdParam, 10) : undefined;
 
   try {
     const files = await listFiles(env.DB, user.id, folderId);

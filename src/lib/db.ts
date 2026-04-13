@@ -9,7 +9,7 @@ export async function getUserByEmail(db: D1Database, email: string): Promise<Rus
   return db.prepare('SELECT * FROM users WHERE email = ?').bind(email).first<RushUser>();
 }
 
-export async function createUser(db: D1Database, data: { email: string, name: string, password_hash: string }): Promise<RushUser> {
+export async function createUser(db: D1Database, data: { email: string, name: string, password_hash: string }): Promise<RushUser | null> {
   return db.prepare(
     'INSERT INTO users (email, name, password_hash) VALUES (?, ?, ?) RETURNING *'
   ).bind(data.email, data.name, data.password_hash).first<RushUser>();
@@ -43,13 +43,13 @@ export async function getFolder(db: D1Database, id: number): Promise<Folder | nu
   return db.prepare('SELECT * FROM folders WHERE id = ?').bind(id).first<Folder>();
 }
 
-export async function createFile(db: D1Database, data: { name: string, folder_id?: number, owner_id: number, r2_key: string, size: number, mime_type: string }): Promise<RushFile> {
+export async function createFile(db: D1Database, data: { name: string, folder_id?: number, owner_id: number, r2_key: string, size: number, mime_type: string }): Promise<RushFile | null> {
   return db.prepare(
     'INSERT INTO files (name, folder_id, owner_id, r2_key, size, mime_type) VALUES (?, ?, ?, ?, ?, ?) RETURNING *'
   ).bind(data.name, data.folder_id ?? null, data.owner_id, data.r2_key, data.size, data.mime_type).first<RushFile>();
 }
 
-export async function createFolder(db: D1Database, data: { name: string, parent_id?: number, owner_id: number, path: string, depth: number }): Promise<Folder> {
+export async function createFolder(db: D1Database, data: { name: string, parent_id?: number, owner_id: number, path: string, depth: number }): Promise<Folder | null> {
   return db.prepare(
     'INSERT INTO folders (name, parent_id, owner_id, path, depth) VALUES (?, ?, ?, ?, ?) RETURNING *'
   ).bind(data.name, data.parent_id ?? null, data.owner_id, data.path, data.depth).first<Folder>();
@@ -67,7 +67,7 @@ export async function getUploadSession(db: D1Database, id: number): Promise<Uplo
   return db.prepare('SELECT * FROM upload_sessions WHERE id = ?').bind(id).first<UploadSession>();
 }
 
-export async function createUploadSession(db: D1Database, data: { file_name: string, file_key: string, upload_id: string, total_parts: number, total_bytes: number, folder_id?: number, owner_id: number }): Promise<UploadSession> {
+export async function createUploadSession(db: D1Database, data: { file_name: string, file_key: string, upload_id: string, total_parts: number, total_bytes: number, folder_id?: number, owner_id: number }): Promise<UploadSession | null> {
   return db.prepare(
     'INSERT INTO upload_sessions (file_name, file_key, upload_id, total_parts, total_bytes, folder_id, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *'
   ).bind(data.file_name, data.file_key, data.upload_id, data.total_parts, data.total_bytes, data.folder_id ?? null, data.owner_id).first<UploadSession>();

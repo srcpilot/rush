@@ -12,27 +12,30 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { file_name, file_size, mime_type, total_parts, folder_id } = await request.json();
+    const body = await request.json() as Record<string, unknown>;
+    const { file_name, file_size, mime_type, total_parts, folder_id } = body;
 
-    const file_key = generateFileKey(file_name, folder_id);
-    const { upload_id } = await createMultipartUpload(env.STORAGE, file_key, mime_type);
+    if (typeof file_name !== 'string' || typeof mime_type !== 'string') {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
 
-    const session = await createUploadSession(env, {
-      user_id: user.id,
+    const file_key = generateFileKey(user.id, file_name);
+    const { uploadId } = await createMultipartUpload(env.STORAGE, file_key, mime_type);
+
+    const session = await createUploadSession(env.DB, {
       file_name,
-      file_size,
-      mime_type,
       file_key,
-      upload_id,
-      total_parts,
-      folder_id,
-      status: 'pending'
+      upload_id: uploadId,
+      total_parts: typeof total_parts === 'number' ? total_parts : 1,
+      total_bytes: typeof file_size === 'number' ? file_size : 0,
+      folder_id: typeof folder_id === 'number' ? folder_id : undefined,
+      owner_id: user.id,
     });
 
     return NextResponse.json({
-      session_id: session.id,
-      upload_id,
-      file_key
+      session_id: session?.id,
+      upload_id: uploadId,
+      file_key,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -29,12 +29,12 @@ export async function GET(request: NextRequest) {
     .join(' ');
 
   try {
-    const { results, count } = await searchFiles(env.DB, user.id, sanitizedQ, limit);
+    const results = await searchFiles(env.DB, user.id, sanitizedQ, limit);
 
     return NextResponse.json({
       results,
       query: q,
-      count
+      count: results.length,
     });
   } catch (error) {
     console.error('Search error:', error);

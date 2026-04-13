@@ -41,7 +41,7 @@ export function UploadZone({ folderId, onUploadComplete }: UploadZoneProps) {
   };
 
   const handleFiles = async (files: FileList | File[]) => {
-    const manager = new UploadManager(token, window.location.origin);
+    const manager = new UploadManager(token ?? '', window.location.origin);
     
     for (const file of Array.from(files)) {
       try {

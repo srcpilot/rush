@@ -17,7 +17,7 @@ export async function GET(
   try {
     const folder = await getFolder(env.DB, id);
     if (!folder) return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
-    if (folder.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (folder.owner_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     return NextResponse.json({ data: folder });
   } catch (error) {
@@ -39,7 +39,7 @@ export async function DELETE(
   try {
     const folder = await getFolder(env.DB, id);
     if (!folder) return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
-    if (folder.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (folder.owner_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     await deleteFolder(env.DB, id);
     return NextResponse.json({ data: { success: true } });
