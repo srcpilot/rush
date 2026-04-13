@@ -1,40 +1,46 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth.js';
-import { searchFiles } from '@/lib/db.js';
-import type { RushFile } from '@/lib/types.js';
 import { getCloudflareContext } from 'cloudflare:workers';
+import { NextRequest, NextResponse } from 'next/server';
+import type { RushFile } from '@/lib/types.js';
+import { getAuthUser } from '@/lib/auth.js';
 
-/**
- * GET /api/search?q=term&limit=20
- * Full-text search via FTS5.
- */
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
+  const { env } = getCloudflareContext();
+  const user = await getAuthUser(request, env);
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const q = searchParams.get('q');
+
+  if (!q || q.trim() === '') {
+    return NextResponse.json({ error: 'Query parameter "q" is required' }, { status: 400 });
+  }
+
+  // Sanitize query: replace non-alphanumeric characters with space to prevent FTS5 syntax errors
+  const sanitizedQuery = q.replace(/[^a-zA-Z0-9 ]/g, ' ').trim();
+
+  if (!sanitizedQuery) {
+    return NextResponse.json({ error: 'Invalid query' }, { status: 400 });
+  }
+
   try {
-    const { searchParams } = new URL(req.url);
-    const query = searchParams.get('q')?.trim();
-    const limit = parseInt(searchParams.get('limit') || '20', 10);
+    // Use prefix query (sanitizedQuery + '*') for partial word matching
+    const results = await env.DB.prepare(
+      `SELECT f.* 
+       FROM files_fts fts 
+       JOIN files f ON f.id = fts.rowid 
+       WHERE files_fts MATCH ? AND f.user_id = ? 
+       ORDER BY rank 
+       LIMIT 50`
+    )
+    .bind(sanitizedQuery + '*', user.id)
+    .all<RushFile[]>();
 
-    if (!query) {
-      return NextResponse.json({ files: [], total: 0 });
-    }
-
-    const { env } = getCloudflareContext();
-    const user = await getAuthUser(req, env);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Sanitize FTS5 special characters
-    const sanitizedQuery = query.replace(/[*"]/g, '\\$&');
-
-    const files = await searchFiles(env.DB, user.id, sanitizedQuery, limit);
-
-    return NextResponse.json({
-      files,
-      total: files.length,
-    });
+    return NextResponse.json({ files: results.results });
   } catch (error) {
-    console.error('Search API error:', error);
+    console.error('Search error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
