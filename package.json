@@ -1,0 +1,29 @@
+{
+  "name": "rush",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vinext dev",
+    "build": "vinext build",
+    "deploy": "vinext deploy"
+  },
+  "dependencies": {
+    "vinext": "latest",
+    "react": "^19",
+    "react-dom": "^19",
+    "tailwindcss": "^4"
+  },
+  "devDependencies": {
+    "vite": "^6",
+    "wrangler": "^4",
+    "@cloudflare/vite-plugin": "latest",
+    "@vitejs/plugin-react": "latest",
+    "typescript": "^5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@cloudflare/workers-types": "latest",
+    "clsx": "^2",
+    "tailwind-merge": "^3"
+  }
+}
