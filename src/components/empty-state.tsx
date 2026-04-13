@@ -1,5 +1,3 @@
-'use client';
-
 import { cn } from '@/lib/utils';
 
 interface EmptyStateProps {
@@ -13,38 +11,32 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-      <div className="mb-4 text-[#a3a3a0]">
+    <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+      <div className="w-16 h-16 rounded-full bg-[#1a1a1a] flex items-center justify-center text-[#a3a3a0] mb-4">
         <svg
-          width="48"
-          height="48"
-          viewBox="0 0 24 24"
+          className="w-8 h-8"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          viewBox="0 0 24 24"
         >
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" y1="3" x2="12" y2="15" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+          />
         </svg>
       </div>
-      
-      <h3 className="text-[#fafaf5] text-lg font-medium mb-1">
-        {title}
-      </h3>
-      
+      <h3 className="text-[#fafaf5] text-lg font-medium">{title}</h3>
       {description && (
-        <p className="text-[#a3a3a0] text-sm max-w-xs mb-6">
+        <p className="text-[#a3a3a0] text-sm mt-1 max-w-xs mx-auto">
           {description}
         </p>
       )}
-
       {action && (
         <button
           onClick={action.onClick}
-          className="px-4 py-2 bg-[#1a1a1a] border border-[#262626] text-[#fafaf5] rounded-md text-sm font-medium hover:border-[#d4a853] transition-colors"
+          className="mt-6 px-4 py-2 bg-[#d4a853] text-[#0a0a0a] rounded-md text-sm font-medium hover:bg-[#f5f0e8] transition-colors"
         >
           {action.label}
         </button>
