@@ -1,6 +1,5 @@
 import { getCloudflareContext } from 'cloudflare:workers';
 import { NextRequest, NextResponse } from 'next/server';
-import type { Folder } from '@/lib/types.js';
 import { getFolder, deleteFolder } from '@/lib/db.js';
 import { getAuthUser } from '@/lib/auth.js';
 
@@ -14,8 +13,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const { id } = params;
 
   try {
-    const folder = await getFolder(env, id);
-    
+    const folder = await getFolder(env.DB, parseInt(id, 10));
+
     if (!folder || folder.user_id !== user.id) {
       return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
     }
@@ -36,13 +35,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   const { id } = params;
 
   try {
-    const folder = await getFolder(env, id);
+    const folder = await getFolder(env.DB, parseInt(id, 10));
 
     if (!folder || folder.user_id !== user.id) {
       return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
     }
 
-    await deleteFolder(env, id);
+    await deleteFolder(env.DB, parseInt(id, 10));
 
     return NextResponse.json({ message: 'Folder deleted' });
   } catch (error) {

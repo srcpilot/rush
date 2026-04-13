@@ -60,3 +60,11 @@ export interface UploadSession {
   created_at: string;
   updated_at: string;
 }
+
+export interface UploadItemState {
+  id: string;
+  file: File;
+  progress: number;
+  status: 'queued' | 'uploading' | 'complete' | 'error';
+  error?: string;
+}

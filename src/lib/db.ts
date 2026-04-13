@@ -10,50 +10,53 @@ export async function getUserByEmail(db: D1Database, email: string): Promise<any
   return await db.prepare('SELECT * FROM users WHERE email = ?').bind(email).first();
 }
 
-export async function createUser(db: D1Database, user: any): Promise<void> {
+export async function createUser(db: D1Database, user: any): Promise<{ id: number; email: string; name: string | null; storage_used: number; storage_quota: number; created_at: string }> {
   await db.prepare('INSERT INTO users (email, name, password_hash, active, joined) VALUES (?, ?, ?, ?, ?)')
     .bind(user.email, user.name, user.password_hash, user.active, user.joined)
     .run();
+  const created = await db.prepare('SELECT * FROM users WHERE email = ?').bind(user.email).first<{ id: number; email: string; name: string | null; storage_used: number; storage_quota: number; created_at: string }>();
+  if (!created) throw new Error('Failed to fetch created user');
+  return created;
 }
 
 export async function listFiles(db: D1Database, ownerId: number): Promise<RushFile[]> {
   return await db.prepare('SELECT * FROM files WHERE owner_id = ?')
     .bind(ownerId)
     .all()
-    .then(res => res.results as RushFile[]);
+    .then(res => res.results as unknown as RushFile[]);
 }
 
 export async function listFolders(db: D1Database, ownerId: number): Promise<Folder[]> {
   return await db.prepare('SELECT * FROM folders WHERE owner_id = ?')
     .bind(ownerId)
     .all()
-    .then(res => res.results as Folder[]);
+    .then(res => res.results as unknown as Folder[]);
 }
 
 export async function searchFiles(db: D1Database, ownerId: number, query: string, limit: number = 20): Promise<{ files: RushFile[], total: number }> {
   const results = await db.prepare(`
-    SELECT f.* 
-    FROM files_fts fts 
-    JOIN files f ON f.id = fts.rowid 
-    WHERE fts.name MATCH ? 
-    AND f.owner_id = ? 
-    AND f.status = 'active' 
+    SELECT f.*
+    FROM files_fts fts
+    JOIN files f ON f.id = fts.rowid
+    WHERE fts.name MATCH ?
+    AND f.owner_id = ?
+    AND f.status = 'active'
     LIMIT ?
   `)
     .bind(query, ownerId, limit)
     .all();
 
-  const files = results.results as RushFile[];
-  
+  const files = results.results as unknown as RushFile[];
+
   return { files, total: files.length };
 }
 
 export async function getFile(db: D1Database, id: number): Promise<RushFile | undefined> {
-  return await db.prepare('SELECT * FROM files WHERE id = ?').bind(id).first<RushFile>();
+  return await db.prepare('SELECT * FROM files WHERE id = ?').bind(id).first<RushFile>() ?? undefined;
 }
 
 export async function getFolder(db: D1Database, id: number): Promise<Folder | undefined> {
-  return await db.prepare('SELECT * FROM folders WHERE id = ?').bind(id).first<Folder>();
+  return await db.prepare('SELECT * FROM folders WHERE id = ?').bind(id).first<Folder>() ?? undefined;
 }
 
 export async function createFile(db: D1Database, file: any): Promise<void> {
@@ -107,4 +110,32 @@ export async function getShareByToken(db: D1Database, token: string): Promise<an
 
 export async function incrementShareDownload(db: D1Database, id: string): Promise<void> {
   await db.prepare('UPDATE shares SET downloads = downloads + 1 WHERE id = ?').bind(id).run();
+}
+
+export async function deleteFolder(db: D1Database, id: number | string): Promise<void> {
+  await db.prepare('DELETE FROM folders WHERE id = ?').bind(id).run();
+}
+
+// createRushFile is an alias for createFile used by generated upload routes
+export async function createRushFile(db: D1Database, file: {
+  name: string;
+  size: number;
+  mimeType?: string;
+  mime_type?: string;
+  r2Key?: string;
+  r2_key?: string;
+  userId?: number;
+  user_id?: number;
+  folderId?: number;
+  folder_id?: number;
+  status?: string;
+}): Promise<void> {
+  const mimeType = file.mimeType ?? file.mime_type ?? '';
+  const r2Key = file.r2Key ?? file.r2_key ?? '';
+  const userId = file.userId ?? file.user_id ?? 0;
+  const folderId = file.folderId ?? file.folder_id ?? null;
+  const status = file.status ?? 'active';
+  await db.prepare('INSERT INTO files (name, size, mime_type, r2_key, user_id, folder_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .bind(file.name, file.size, mimeType, r2Key, userId, folderId, status)
+    .run();
 }

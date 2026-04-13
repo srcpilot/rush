@@ -22,7 +22,20 @@ export async function verifyPassword(password: string, storedHash: string): Prom
   return newHash === hashStr;
 }
 
-export function createToken(userId: number, secret: string): string {
+export function createToken(userId: number, secret: string): string;
+export function createToken(env: Env, userId: number): string;
+export function createToken(userIdOrEnv: number | Env, secretOrUserId: string | number): string {
+  let userId: number;
+  let secret: string;
+  if (typeof userIdOrEnv === 'object') {
+    // createToken(env, userId)
+    userId = secretOrUserId as number;
+    secret = (userIdOrEnv as Env).JWT_SECRET || 'CHANGE_ME_IN_PRODUCTION';
+  } else {
+    // createToken(userId, secret)
+    userId = userIdOrEnv as number;
+    secret = secretOrUserId as string;
+  }
   const payload = {
     userId,
     exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 // 24 hours

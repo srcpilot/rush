@@ -2,7 +2,7 @@ import { getCloudflareContext } from 'cloudflare:workers';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth.js';
 import { createUploadSession } from '@/lib/db.js';
-import { generateR2Key, createMultipartUpload } from '@/lib/r2.js';
+import { generateFileKey, initiateMultipartUpload } from '@/lib/r2.js';
 import { generateToken } from '@/lib/utils.js';
 
 export async function POST(request: NextRequest) {
@@ -13,32 +13,38 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { filename, size, mimeType, totalParts, folderId } = await request.json();
+    const body = await request.json() as {
+      filename?: string;
+      size?: number;
+      mimeType?: string;
+      totalParts?: number;
+      folderId?: number;
+    };
+    const { filename, size, mimeType, totalParts, folderId } = body;
 
     if (!filename || !size || !totalParts) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const r2Key = generateR2Key(user.id, filename);
-    const { uploadId } = await createMultipartUpload(env, r2Key);
+    const r2Key = generateFileKey(user.id, filename);
+    const { uploadId } = await initiateMultipartUpload(env.STORAGE, r2Key);
     const sessionId = generateToken();
 
-    await createUploadSession(env, {
+    await createUploadSession(env.DB, {
       id: sessionId,
-      userId: user.id,
-      filename,
-      size,
-      mimeType,
-      totalParts,
-      folderId,
-      r2Key,
-      uploadId,
-      status: 'pending'
+      user_id: user.id,
+      file_name: filename,
+      total_bytes: size,
+      mime_type: mimeType ?? '',
+      completed_parts: JSON.stringify([]),
+      folder_id: folderId ?? null,
+      file_key: r2Key,
+      upload_id: uploadId,
     });
 
     return NextResponse.json({ sessionId }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Upload init error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }

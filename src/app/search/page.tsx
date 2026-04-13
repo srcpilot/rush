@@ -3,15 +3,15 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { RushFile } from '@/lib/types.js';
 import { useAuth } from '@/hooks/use-auth.js';
-import SearchResults from '@/components/search-results.tsx';
+import SearchResults from '@/components/search-results';
 
 export default function SearchPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<RushFile[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
-  
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!user && !authLoading) {
@@ -29,12 +29,12 @@ export default function SearchPage() {
     setStatus('loading');
     try {
       const response = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
-        headers: { Authorization: `Bearer ${user?.token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       
       if (!response.ok) throw new Error('Search failed');
       
-      const data = await response.json();
+      const data = await response.json() as RushFile[];
       setResults(data);
       setStatus('done');
     } catch (err) {

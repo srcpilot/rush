@@ -16,20 +16,20 @@ export async function GET(
   const { id } = params;
 
   try {
-    const file = await getFile(env, id);
-    if (!file || file.userId !== user.id) {
+    const file = await getFile(env.DB, parseInt(id, 10));
+    if (!file || file.user_id !== user.id) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    const obj = await env.STORAGE.get(file.r2Key);
+    const obj = await env.STORAGE.get(file.r2_key);
     if (!obj) {
       return NextResponse.json({ error: 'File not found in storage' }, { status: 404 });
     }
 
     return new Response(obj.body, {
       headers: {
-        'Content-Type': file.mimeType,
-        'Content-Disposition': `attachment; filename="${file.name}"`,
+        'Content-Type': file.mime_type,
+        'Content-Disposition': `attachment; filename="${file.name ?? 'download'}"`,
       },
     });
   } catch (error) {

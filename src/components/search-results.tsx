@@ -23,8 +23,8 @@ export default function SearchResults({ results }: SearchResultsProps) {
               </div>
             </div>
           </div>
-          <a 
-            href={file.download_url} 
+          <a
+            href={`/api/files/${file.id}/download`}
             className="opacity-0 group-hover:opacity-100 text-[#d4a853] text-sm font-medium transition-opacity"
             download
           >

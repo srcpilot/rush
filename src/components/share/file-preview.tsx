@@ -6,14 +6,15 @@ interface FilePreviewProps {
 }
 
 export default function FilePreview({ file }: FilePreviewProps) {
-  const { mimeType, name } = file;
+  const mimeType = file.mime_type;
+  const name = file.name ?? 'file';
 
   if (mimeType.startsWith('image/')) {
     return (
       <div className="flex items-center justify-center p-4 bg-[#1a1a1a]">
-        <img 
-          src={`/api/files/${file.id}`} 
-          alt={name} 
+        <img
+          src={`/api/files/${file.id}`}
+          alt={name}
           className="max-w-full max-h-[70vh] object-contain"
         />
       </div>
@@ -23,8 +24,8 @@ export default function FilePreview({ file }: FilePreviewProps) {
   if (mimeType.startsWith('video/')) {
     return (
       <div className="flex items-center justify-center p-4 bg-[#1a1a1a]">
-        <video 
-          controls 
+        <video
+          controls
           className="max-w-full max-h-[70vh]"
         >
           <source src={`/api/files/${file.id}`} type={mimeType} />
@@ -37,8 +38,8 @@ export default function FilePreview({ file }: FilePreviewProps) {
   if (mimeType.startsWith('audio/')) {
     return (
       <div className="flex items-center justify-center p-8 bg-[#1a1a1a]">
-        <audio 
-          controls 
+        <audio
+          controls
           className="w-full max-w-md"
         >
           <source src={`/api/files/${file.id}`} type={mimeType} />

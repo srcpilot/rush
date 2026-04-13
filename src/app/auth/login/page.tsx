@@ -25,7 +25,7 @@ export default function LoginPage() {
       }),
     });
 
-    const data = await response.json();
+    const data = await response.json() as { error?: string; user?: unknown; token?: string };
 
     if (!response.ok) {
       throw new Error(data.error || 'Login failed');

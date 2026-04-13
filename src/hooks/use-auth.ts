@@ -1,6 +1,2 @@
-import { useAuth } from '@/context/auth';
-import type { RushUser } from '@/lib/types.js';
-
-export function useAuth() {
-  return useAuth();
-}
+export { useAuth } from '@/context/auth';
+export type { RushUser } from '@/lib/types.js';

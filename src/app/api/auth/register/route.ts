@@ -1,12 +1,13 @@
 import { getCloudflareContext } from 'cloudflare:workers';
 import { NextRequest, NextResponse } from 'next/server';
 import type { RushUser } from '@/lib/types.js';
-import { getUserByEmail, createUser } from '@/lib/db.js';
+import { createUser } from '@/lib/db.js';
 import { hashPassword, createToken } from '@/lib/auth.js';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, name, password } = await request.json();
+    const body = await request.json() as { email: string; name: string; password: string };
+    const { email, name, password } = body;
 
     if (!email || !name || !password) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -17,14 +18,14 @@ export async function POST(request: NextRequest) {
     }
 
     const { env } = getCloudflareContext();
-    const existing = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first();
+    const existing = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
 
     if (existing) {
       return NextResponse.json({ error: 'Email already exists' }, { status: 409 });
     }
 
     const hashedPassword = await hashPassword(password);
-    const user = await createUser(env, {
+    const user = await createUser(env.DB, {
       email,
       name,
       password_hash: hashedPassword,
@@ -32,15 +33,15 @@ export async function POST(request: NextRequest) {
       joined: new Date().toISOString(),
     });
 
-    const token = await createToken(env, user.id);
+    const token = createToken(env, user.id);
 
     const userResponse: Pick<RushUser, 'id' | 'email' | 'name' | 'storage_used' | 'storage_quota' | 'created_at'> = {
       id: user.id,
       email: user.email,
       name: user.name,
-      storage_used: user.storage_used,
-      storage_quota: user.storage_quota,
-      created_at: user.created_at,
+      storage_used: user.storage_used ?? 0,
+      storage_quota: user.storage_quota ?? 0,
+      created_at: user.created_at ?? new Date().toISOString(),
     };
 
     return NextResponse.json({ user: userResponse, token }, { status: 201 });

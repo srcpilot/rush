@@ -13,10 +13,10 @@ export default function FileCard({ file }: FileCardProps) {
   return (
     <div className="group bg-[#141414] hover:bg-[#1a1a1a] border border-[#262626] rounded-lg p-2 transition-all relative overflow-hidden">
       <div className="aspect-square bg-[#1a1a1a] rounded mb-2 flex items-center justify-center overflow-hidden relative">
-        {isImage && file.thumbnail_key ? (
+        {isImage ? (
           <img
             src={`/api/files/${file.id}/thumbnail`}
-            alt={file.name}
+            alt={file.name ?? ''}
             className="object-cover w-full h-full"
           />
         ) : (

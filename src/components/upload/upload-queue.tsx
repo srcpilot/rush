@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { UploadItem } from './upload-item';
-import { useUploadManager } from '@/hooks/use-upload-manager';
+import { useUploadQueue } from '@/hooks/use-upload-queue';
+import type { UploadItemState } from '@/lib/types.js';
 
 export function UploadQueue() {
-  const { queue, addFiles } = useUploadManager();
+  const { queue } = useUploadQueue();
 
   if (queue.length === 0) {
     return (
@@ -15,7 +16,7 @@ export function UploadQueue() {
 
   return (
     <div className="space-y-3">
-      {queue.map((item) => (
+      {queue.map((item: UploadItemState) => (
         <UploadItem key={item.id} item={item} />
       ))}
     </div>

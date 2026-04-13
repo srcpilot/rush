@@ -1,16 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import type { Share, RushFile } from '@/lib/types.js';
+import type { RushFile } from '@/lib/types.js';
 import FilePreview from '@/components/share/file-preview';
 import PasswordGate from '@/components/share/password-gate';
 
 type Status = 'loading' | 'password_required' | 'ready' | 'expired' | 'error';
 
+interface ShareResponse {
+  id: number;
+  token: string;
+  file?: RushFile;
+  isPasswordProtected?: boolean;
+  password_hash?: string;
+  expires_at?: string;
+}
+
 export default function SharePage() {
   const params = useParams();
   const token = params.token as string;
 
-  const [share, setShare] = useState<Share | null>(null);
   const [file, setFile] = useState<RushFile | null>(null);
   const [status, setStatus] = useState<Status>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -26,11 +34,10 @@ export default function SharePage() {
           }
           throw new Error('Failed to fetch share');
         }
-        const data: Share = await res.json();
-        setShare(data);
-        setFile(data.file);
-        
-        if (data.isPasswordProtected) {
+        const data = await res.json() as ShareResponse;
+        setFile(data.file ?? null);
+
+        if (data.isPasswordProtected || data.password_hash) {
           setStatus('password_required');
         } else {
           setStatus('ready');
@@ -47,7 +54,7 @@ export default function SharePage() {
     }
   }, [token]);
 
-  const handleDownload = async (password?: string) => {
+  const handleDownload = async (password: string) => {
     try {
       const res = await fetch(`/api/shares/${token}/download`, {
         method: 'POST',
@@ -131,7 +138,7 @@ export default function SharePage() {
             </p>
           </div>
           <button
-            onClick={() => handleDownload()}
+            onClick={() => handleDownload('')}
             className="px-6 py-2 bg-[#d4a853] hover:bg-[#c2964a] text-[#0a0a0a] font-semibold rounded transition-colors"
           >
             Download

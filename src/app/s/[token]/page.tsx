@@ -1,35 +1,88 @@
-import { FilePreview } from "@/components/share/file-preview.js";
-import { PasswordForm } from "@/components/share/password-form.js";
-import { cn } from "@/lib/utils.js";
+'use client';
 
-type ShareStatus = "loading" | "public" | "password" | "error" | "expired";
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import FilePreview from '@/components/share/file-preview';
+import PasswordForm from '@/components/share/password-form';
+import type { RushFile } from '@/lib/types.js';
+
+type Status = 'loading' | 'public' | 'password' | 'expired' | 'not_found' | 'error';
 
 interface ShareData {
   access?: string;
   name?: string;
   size?: number;
   mimeType?: string;
-  url?: string;
+  file?: RushFile;
 }
 
-async function getShare(token: string) {
-  const res = await fetch(`/api/shares/${token}`);
-  if (res.status === 410) return { status: "expired" as const, data: undefined as ShareData | undefined };
-  if (res.status === 404) return { status: "not_found" as const, data: undefined as ShareData | undefined };
-  if (!res.ok) return { status: "error" as const, data: undefined as ShareData | undefined };
+export default function SharePage() {
+  const params = useParams<{ token: string }>();
+  const token = params.token;
 
-  const data = await res.json() as ShareData;
-  return {
-    status: (data.access === "password" ? "password" : "public") as ShareStatus,
-    data,
+  const [status, setStatus] = useState<Status>('loading');
+  const [shareData, setShareData] = useState<ShareData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchShare() {
+      try {
+        const res = await fetch(`/api/shares/${token}`);
+        if (res.status === 410 || res.status === 404) {
+          setStatus('expired');
+          return;
+        }
+        if (!res.ok) {
+          setStatus('error');
+          return;
+        }
+        const data = await res.json() as ShareData;
+        setShareData(data);
+        setStatus(data.access === 'password' ? 'password' : 'public');
+      } catch {
+        setStatus('error');
+      }
+    }
+    if (token) fetchShare();
+  }, [token]);
+
+  const handlePasswordSubmit = async (password: string) => {
+    try {
+      const res = await fetch(`/api/shares/${token}/download`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          throw new Error('Incorrect password');
+        }
+        throw new Error('Download failed');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = shareData?.name ?? 'download';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Download failed');
+      throw err;
+    }
   };
-}
 
-export default async function SharePage({ params }: { params: { token: string } }) {
-  const { token } = params;
-  const share = await getShare(token);
+  if (status === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
-  if (share.status === "expired") {
+  if (status === 'expired' || status === 'not_found') {
     return (
       <div className="flex min-h-screen items-center justify-center p-4 text-center">
         <div className="max-w-md space-y-2">
@@ -40,18 +93,7 @@ export default async function SharePage({ params }: { params: { token: string } 
     );
   }
 
-  if (share.status === "not_found") {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4 text-center">
-        <div className="max-w-md space-y-2">
-          <h1 className="text-2xl font-bold">Not Found</h1>
-          <p className="text-muted-foreground">The share link you are looking for does not exist.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (share.status === "error") {
+  if (status === 'error') {
     return (
       <div className="flex min-h-screen items-center justify-center p-4 text-center">
         <div className="max-w-md space-y-2">
@@ -62,26 +104,29 @@ export default async function SharePage({ params }: { params: { token: string } 
     );
   }
 
+  if (status === 'password') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <PasswordForm onSuccess={handlePasswordSubmit} error={error} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto flex min-h-screen flex-col items-center justify-center p-4">
         <div className="w-full max-w-3xl space-y-8">
-          {share.status === "password" ? (
-            <PasswordForm token={token} />
-          ) : (
-            <div className="space-y-6">
-              <div className="text-center space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight">
-                  {share.data?.name || "Shared File"}
-                </h1>
-                <p className="text-muted-foreground">
-                  {share.data?.size ? `${(share.data.size / 1024 / 1024).toFixed(2)} MB` : "File"}
-                </p>
-              </div>
-
-              <FilePreview file={share.data ?? {}} downloadUrl={`/api/shares/${token}/download`} />
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {shareData?.name ?? 'Shared File'}
+              </h1>
+              <p className="text-muted-foreground">
+                {shareData?.size ? `${(shareData.size / 1024 / 1024).toFixed(2)} MB` : 'File'}
+              </p>
             </div>
-          )}
+            {shareData?.file && <FilePreview file={shareData.file} />}
+          </div>
         </div>
       </main>
     </div>

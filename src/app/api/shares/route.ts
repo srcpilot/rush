@@ -1,9 +1,8 @@
 import { getCloudflareContext } from 'cloudflare:workers';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, hashPassword } from '@/lib/auth.js';
-import { generateToken, isExpired } from '@/lib/utils.js';
-import { createShare, getShareByToken, getFile, incrementShareDownload } from '@/lib/db.js';
-import { getObject } from '@/lib/r2.js';
+import { generateToken } from '@/lib/utils.js';
+import { createShare } from '@/lib/db.js';
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +12,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await req.json() as {
+      fileId?: number;
+      folderId?: number;
+      access?: string;
+      password?: string;
+      expiresAt?: string;
+      maxDownloads?: number | string;
+    };
     const { fileId, folderId, access, password, expiresAt, maxDownloads } = body;
 
     if (!fileId && !folderId) {
@@ -27,12 +33,12 @@ export async function POST(req: NextRequest) {
     const newShare = {
       id,
       token,
-      file_id: fileId || null,
-      folder_id: folderId || null,
-      access: access || 'public',
+      file_id: fileId ?? null,
+      folder_id: folderId ?? null,
+      access: access ?? 'public',
       password_hash,
-      expires_at: expiresAt ? new Date(expiresAt) : null,
-      max_downloads: maxDownloads ? parseInt(maxDownloads) : null,
+      expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      max_downloads: maxDownloads ? parseInt(String(maxDownloads), 10) : null,
       downloads: 0,
       created_at: new Date().toISOString(),
     };
@@ -41,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       token,
-      url: `/api/shares/${token}`
+      url: `/api/shares/${token}`,
     }, { status: 201 });
 
   } catch (error) {

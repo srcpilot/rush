@@ -54,7 +54,7 @@ export function Nav() {
                 <span className="text-xs text-[#a3a3a0]">{user.email}</span>
               </div>
               <div className="w-8 h-8 rounded-full bg-[#1a1a1a] border border-[#262626] flex items-center justify-center text-[#d4a853] text-xs font-bold">
-                {getInitials(user.name)}
+                {getInitials(user.name ?? user.email)}
               </div>
             </div>
             <button

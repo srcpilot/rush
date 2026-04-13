@@ -12,14 +12,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   }
 
   try {
-    const file = await getFile(env.DB, params.id);
-    if (!file || file.owner_id !== user.id) {
+    const file = await getFile(env.DB, parseInt(params.id, 10));
+    if (!file || file.user_id !== user.id) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    await deleteFile(env.DB, params.id, user.id);
+    await deleteFile(env.DB, parseInt(params.id, 10));
 
-    return NextResponse.json({ message: 'Trash status toggled' });
+    return NextResponse.json({ message: 'File moved to trash' });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update trash status' }, { status: 500 });
   }

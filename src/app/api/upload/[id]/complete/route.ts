@@ -1,9 +1,8 @@
 import { getCloudflareContext } from 'cloudflare:workers';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth.js';
-import { getUploadSession, updateUploadSession } from '@/lib/db.js';
+import { getUploadSession, updateUploadSession, createRushFile } from '@/lib/db.js';
 import { completeMultipartUpload } from '@/lib/r2.js';
-import { createRushFile } from '@/lib/db.js'; // Assuming this exists based on task description
 
 export async function POST(request: NextRequest) {
   const { env } = getCloudflareContext();
@@ -18,30 +17,31 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { parts } = await request.json();
-    const session = await getUploadSession(env, sessionId);
+    const body = await request.json() as { parts?: { partNumber: number; etag: string }[] };
+    const { parts } = body;
+    const session = await getUploadSession(env.DB, sessionId);
 
-    if (!session || session.userId !== user.id) {
+    if (!session || session.user_id !== user.id) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    await completeMultipartUpload(env, session.r2Key, session.uploadId, parts);
+    await completeMultipartUpload(env.STORAGE, session.file_key, session.upload_id, parts ?? []);
 
-    await updateUploadSession(env, sessionId, { status: 'complete' });
+    await updateUploadSession(env.DB, sessionId, { status: 'complete' });
 
-    await createRushFile(env, {
-      name: session.filename,
-      size: session.size,
-      mimeType: session.mimeType,
-      r2Key: session.r2Key,
-      userId: user.id,
-      folderId: session.folderId,
-      status: 'active'
+    await createRushFile(env.DB, {
+      name: session.file_name,
+      size: session.total_bytes,
+      mime_type: session.mime_type,
+      r2_key: session.file_key,
+      user_id: user.id,
+      folder_id: session.folder_id,
+      status: 'active',
     });
 
     return NextResponse.json({ success: true }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Upload complete error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }

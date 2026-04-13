@@ -17,8 +17,8 @@ export async function GET(
   const { id } = params;
 
   try {
-    const file = await getFile(env, id);
-    if (!file || file.userId !== user.id) {
+    const file = await getFile(env.DB, parseInt(id, 10));
+    if (!file || file.user_id !== user.id) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
     return NextResponse.json({ data: file });
@@ -40,13 +40,13 @@ export async function DELETE(
   const { id } = params;
 
   try {
-    const file = await getFile(env, id);
-    if (!file || file.userId !== user.id) {
+    const file = await getFile(env.DB, parseInt(id, 10));
+    if (!file || file.user_id !== user.id) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    await deleteObject(env, file.r2Key);
-    await deleteFile(env, id);
+    await deleteObject(env, file.r2_key);
+    await deleteFile(env.DB, parseInt(id, 10));
 
     return NextResponse.json({ data: { id } });
   } catch (error) {

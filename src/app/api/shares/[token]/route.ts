@@ -2,7 +2,6 @@ import { getCloudflareContext } from 'cloudflare:workers';
 import { NextRequest, NextResponse } from 'next/server';
 import { getShareByToken, getFile, incrementShareDownload } from '@/lib/db.js';
 import { isExpired } from '@/lib/utils.js';
-import { getObject } from '@/lib/r2.js';
 
 export async function GET(req: NextRequest) {
   try {
@@ -41,8 +40,8 @@ export async function GET(req: NextRequest) {
         id: fileInfo.id,
         name: fileInfo.name,
         size: fileInfo.size,
-        type: fileInfo.type
-      } : null
+        mime_type: fileInfo.mime_type,
+      } : null,
     });
   } catch (error) {
     console.error('Error verifying share:', error);

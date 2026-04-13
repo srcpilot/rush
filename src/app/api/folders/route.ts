@@ -1,6 +1,5 @@
 import { getCloudflareContext } from 'cloudflare:workers';
 import { NextRequest, NextResponse } from 'next/server';
-import type { Folder } from '@/lib/types.js';
 import { listFolders, createFolder } from '@/lib/db.js';
 import { getAuthUser } from '@/lib/auth.js';
 import { buildFolderPath } from '@/lib/utils.js';
@@ -12,11 +11,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { searchParams } = new URL(request.url);
-  const parentId = searchParams.get('parentId');
-
   try {
-    const folders = await listFolders(env, user.id, parentId);
+    const folders = await listFolders(env.DB, user.id);
     return NextResponse.json(folders);
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -31,21 +27,24 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { name, parentId } = await request.json();
+    const body = await request.json() as { name: string; parentId?: number };
+    const { name, parentId } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    const path = await buildFolderPath(env, parentId, name);
-    const folder = await createFolder(env, {
+    const path = parentId
+      ? await buildFolderPath(env.DB, parentId)
+      : '/';
+    await createFolder(env.DB, {
       name,
-      parentId,
-      path,
-      userId: user.id,
+      parent_id: parentId ?? null,
+      path: path === '/' ? `/${name}` : `${path}/${name}`,
+      owner_id: user.id,
     });
 
-    return NextResponse.json(folder, { status: 201 });
+    return NextResponse.json({ message: 'Folder created' }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
