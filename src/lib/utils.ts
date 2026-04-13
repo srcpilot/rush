@@ -2,7 +2,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 /**
- * Combines clsx and tailwind-merge to merge class names safely.
+ * Combines clsx and tailwind-merge for conditional class names.
  */
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
@@ -20,23 +20,23 @@ export function formatBytes(bytes: number, decimals: number = 2): string {
 
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
 /**
  * Generates a cryptographically strong random hex token.
- * Uses crypto.getRandomValues for compatibility with Workers/Browsers.
+ * Uses crypto.getRandomValues for Workers/Browser compatibility.
  */
 export function generateToken(length: number = 32): string {
-  const array = new Uint8Array(length);
-  crypto.getRandomValues(array);
-  return Array.from(array)
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 }
 
 /**
- * Converts a string into a URL-friendly slug.
+ * Converts a string to a URL-friendly slug.
  */
 export function slugify(text: string): string {
   return text
