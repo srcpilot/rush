@@ -3,18 +3,14 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"],
-      "next/server": ["node_modules/vinext/dist/shims/server.d.ts"],
-      "next/navigation": ["node_modules/vinext/dist/shims/navigation.d.ts"],
-      "next/link": ["node_modules/vinext/dist/shims/link.d.ts"],
-      "next/image": ["node_modules/vinext/dist/shims/image.d.ts"]
-    },
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
     "skipLibCheck": true,
-    "esModuleInterop": true
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true
   },
-  "include": ["src/**/*", "env.d.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "env.d.ts"]
 }
