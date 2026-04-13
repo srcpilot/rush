@@ -1,61 +1,111 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState, FormEvent } from 'react';
+import { Lock, Loader2 } from 'lucide-react';
 
-interface PasswordFormProps {
-  onSuccess: (password: string) => void;
-  error?: string | null;
+interface Share {
+  id: string;
+  requires_password: boolean;
 }
 
-export default function PasswordForm({ onSuccess, error }: PasswordFormProps) {
-  const [password, setPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+interface RushFile {
+  id: string;
+  name: string;
+  size: number;
+  mime_type: string;
+  upload_date: string;
+  download_count: number;
+}
 
-  const handleSubmit = async (e: React.FormEvent) => {
+interface ShareData {
+  share: Share;
+  file: RushFile;
+}
+
+interface PasswordFormProps {
+  token: string;
+  onUnlock: (data: ShareData) => void;
+}
+
+export function PasswordForm({ token, onUnlock }: PasswordFormProps) {
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setIsLoading(true);
+    setError(null);
+
     try {
-      await onSuccess(password);
+      const res = await fetch(`/api/shares/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+
+      if (res.status === 401) {
+        throw new Error('Incorrect password');
+      }
+
+      if (!res.ok) {
+        throw new Error('An error occurred while unlocking');
+      }
+
+      const data: ShareData = await res.json();
+      onUnlock(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-md p-8 bg-[#141414] border border-[#262626] rounded-lg shadow-xl">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-[#1a1a1a] border border-[#262626] rounded-full text-2xl">
-          🔒
+    <div className="bg-[#141414] border border-[#262626] rounded-xl p-8 max-w-md mx-auto shadow-2xl w-full">
+      <div className="flex flex-col items-center text-center space-y-6">
+        <div className="p-4 bg-[#1a1a1a] rounded-full">
+          <Lock className="w-8 h-8 text-[#d4a853]" />
         </div>
-        <h2 className="text-2xl font-bold text-[#fafaf5]">Password Protected</h2>
-        <p className="text-[#a3a3a0] mt-2">Please enter the password to access this file.</p>
+
+        <div className="space-y-2">
+          <h2 className="text-[#fafaf5] text-xl font-semibold">
+            Password Protected
+          </h2>
+          <p className="text-[#a3a3a0] text-sm">
+            This file is protected. Please enter the password to access it.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="w-full space-y-4">
+          <div className="space-y-2">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              className="w-full bg-[#0a0a0a] border border-[#262626] rounded-lg px-4 py-3 text-[#fafaf5] focus:outline-none focus:border-[#d4a853] transition-colors"
+              autoFocus
+              required
+            />
+            {error && (
+              <p className="text-red-500 text-xs text-left px-1">{error}</p>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-[#d4a853] hover:bg-[#b89445] disabled:opacity-50 disabled:cursor-not-allowed text-[#0a0a0a] font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              'Unlock File'
+            )}
+          </button>
+        </form>
       </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter password"
-            className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#262626] rounded text-[#fafaf5] focus:outline-none focus:border-[#d4a853] transition-colors"
-            autoFocus
-            disabled={isSubmitting}
-          />
-        </div>
-
-        {error && (
-          <p className="text-red-500 text-sm text-center">{error}</p>
-        )}
-
-        <button
-          type="submit"
-          disabled={isSubmitting || !password}
-          className="w-full py-3 bg-[#d4a853] hover:bg-[#c2964a] disabled:opacity-50 disabled:cursor-not-allowed text-[#0a0a0a] font-bold rounded transition-colors"
-        >
-          {isSubmitting ? 'Verifying...' : 'Unlock File'}
-        </button>
-      </form>
     </div>
   );
 }
