@@ -1,104 +1,60 @@
-"use client";
-
-import { cn } from "@/lib/utils.js";
+import React from 'react';
+import type { RushFile } from '@/lib/types.js';
 
 interface FilePreviewProps {
-  file: {
-    name?: string;
-    size?: number;
-    mimeType?: string;
-    url?: string;
-  };
-  downloadUrl: string;
+  file: RushFile;
 }
 
-export function FilePreview({ file, downloadUrl }: FilePreviewProps) {
-  const isImage = file.mimeType?.startsWith("image/");
-  const isVideo = file.mimeType?.startsWith("video/");
-  const isAudio = file.mimeType?.startsWith("audio/");
-  const isPdf = file.mimeType === "application/pdf";
+export default function FilePreview({ file }: FilePreviewProps) {
+  const { mimeType, name } = file;
 
-  const formatSize = (bytes?: number) => {
-    if (!bytes) return "";
-    const kb = bytes / 1024;
-    const mb = kb / 1024;
-    if (mb > 1) return `${mb.toFixed(2)} MB`;
-    return `${kb.toFixed(2)} KB`;
-  };
+  if (mimeType.startsWith('image/')) {
+    return (
+      <div className="flex items-center justify-center p-4 bg-[#1a1a1a]">
+        <img 
+          src={`/api/files/${file.id}`} 
+          alt={name} 
+          className="max-w-full max-h-[70vh] object-contain"
+        />
+      </div>
+    );
+  }
+
+  if (mimeType.startsWith('video/')) {
+    return (
+      <div className="flex items-center justify-center p-4 bg-[#1a1a1a]">
+        <video 
+          controls 
+          className="max-w-full max-h-[70vh]"
+        >
+          <source src={`/api/files/${file.id}`} type={mimeType} />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    );
+  }
+
+  if (mimeType.startsWith('audio/')) {
+    return (
+      <div className="flex items-center justify-center p-8 bg-[#1a1a1a]">
+        <audio 
+          controls 
+          className="w-full max-w-md"
+        >
+          <source src={`/api/files/${file.id}`} type={mimeType} />
+          Your browser does not support the audio element.
+        </audio>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col items-center space-y-6 rounded-xl border bg-card p-6 shadow-sm w-full">
-      <div className="w-full flex flex-col items-center justify-center space-y-4">
-        {isImage && (
-          <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-lg border bg-muted">
-            <img
-              src={file.url || ""}
-              alt={file.name || ""}
-              className="object-contain w-full h-full"
-            />
-          </div>
-        )}
-
-        {isVideo && (
-          <div className="w-full max-w-2xl overflow-hidden rounded-lg border bg-black">
-            <video controls className="w-full">
-              <source src={file.url || ""} type={file.mimeType} />
-              Your browser does not support the video tag.
-            </video>
-          </div>
-        )}
-
-        {isAudio && (
-          <div className="w-full max-w-md">
-            <audio controls className="w-full">
-              <source src={file.url || ""} type={file.mimeType} />
-              Your browser does not support the audio element.
-            </audio>
-          </div>
-        )}
-
-        {isPdf && (
-          <div className="w-full aspect-[3/4] max-w-md overflow-hidden rounded-lg border bg-muted flex items-center justify-center">
-            <p className="text-sm text-muted-foreground text-center p-4">
-              PDF preview not available. Please download to view.
-            </p>
-          </div>
-        )}
-
-        {!isImage && !isVideo && !isAudio && !isPdf && (
-          <div className="flex h-32 w-32 items-center justify-center rounded-full bg-muted">
-            <svg
-              className="h-16 w-16 text-muted-foreground"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-        )}
+    <div className="flex flex-col items-center justify-center p-20 bg-[#1a1a1a] text-[#a3a3a0]">
+      <div className="w-16 h-16 mb-4 flex items-center justify-center bg-[#262626] rounded-lg">
+        <span className="text-2xl">📄</span>
       </div>
-
-      <div className="w-full space-y-2 text-center">
-        <h3 className="text-lg font-medium break-all">{file.name}</h3>
-        <p className="text-sm text-muted-foreground">{formatSize(file.size)}</p>
-      </div>
-
-      <a
-        href={downloadUrl}
-        download
-        className={cn(
-          "inline-flex h-10 items-center justify-center rounded-md px-8 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          "bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto"
-        )}
-      >
-        Download File
-      </a>
+      <p className="text-lg font-medium text-[#fafaf5]">{name}</p>
+      <p className="text-sm">{mimeType}</p>
     </div>
   );
 }

@@ -1,96 +1,57 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils.js";
+import React, { useState } from 'react';
 
 interface PasswordFormProps {
-  token: string;
+  onSuccess: (password: string) => void;
+  error?: string | null;
 }
 
-export function PasswordForm({ token }: PasswordFormProps) {
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+export default function PasswordForm({ onSuccess, error }: PasswordFormProps) {
+  const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError("");
-
+    setIsSubmitting(true);
     try {
-      const res = await fetch(`/api/shares/${token}/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
-
-      if (res.ok) {
-        // In a real app, we might set a cookie or session here.
-        // For this task, we'll just refresh to show the content.
-        router.refresh();
-      } else {
-        const data = await res.json() as { message?: string };
-        setError(data.message || "Invalid password");
-      }
-    } catch (err) {
-      setError("An error occurred. Please try again.");
+      await onSuccess(password);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="mx-auto w-full max-w-md rounded-xl border bg-card p-8 shadow-sm">
-      <div className="space-y-4 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <svg
-            className="h-6 w-6 text-primary"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-            />
-          </svg>
+    <div className="w-full max-w-md p-8 bg-[#141414] border border-[#262626] rounded-lg shadow-xl">
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-[#1a1a1a] border border-[#262626] rounded-full text-2xl">
+          🔒
         </div>
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold">Password Protected</h2>
-          <p className="text-sm text-muted-foreground">
-            This share is protected by a password. Please enter it to access the content.
-          </p>
-        </div>
+        <h2 className="text-2xl font-bold text-[#fafaf5]">Password Protected</h2>
+        <p className="text-[#a3a3a0] mt-2">Please enter the password to access this file.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-        <div className="space-y-2">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter password"
-            className={cn(
-              "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-foreground file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-              error && "border-destructive focus-visible:ring-destructive"
-            )}
+            className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#262626] rounded text-[#fafaf5] focus:outline-none focus:border-[#d4a853] transition-colors"
             autoFocus
+            disabled={isSubmitting}
           />
-          {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
+
+        {error && (
+          <p className="text-red-500 text-sm text-center">{error}</p>
+        )}
+
         <button
           type="submit"
-          disabled={isLoading}
-          className={cn(
-            "inline-flex w-full items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-            "bg-primary text-primary-foreground hover:bg-primary/90 h-10"
-          )}
+          disabled={isSubmitting || !password}
+          className="w-full py-3 bg-[#d4a853] hover:bg-[#c2964a] disabled:opacity-50 disabled:cursor-not-allowed text-[#0a0a0a] font-bold rounded transition-colors"
         >
-          {isLoading ? "Verifying..." : "Unlock"}
+          {isSubmitting ? 'Verifying...' : 'Unlock File'}
         </button>
       </form>
     </div>
